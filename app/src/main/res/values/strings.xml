@@ -4,7 +4,7 @@
     <string name="settings_title">OCDroid settings</string>
     <string name="setup_title">Connect to OpenCode</string>
     <string name="setup_subtitle">OCDroid shows the official OpenCode web client, with persistent cache and background notifications.</string>
-    <string name="server_url">Server URL</string>
+    <string name="server_url">Server URL or pairing link</string>
     <string name="username">Username</string>
     <string name="password">Password</string>
     <string name="password_hint">OPENCODE_SERVER_PASSWORD</string>
@@ -54,7 +54,7 @@
     <string name="scan_qr_button">Scan pairing QR</string>
     <string name="help_button">How to find my server</string>
     <string name="find_another">Find another server</string>
-    <string name="or_manual">Or enter an address manually:</string>
+    <string name="or_manual">Or paste a server address or pairing link:</string>
     <string name="discovering">Searching your Wi-Fi for OpenCode…</string>
     <string name="discovery_checking">Checking %1$d addresses on your network…</string>
     <string name="discovery_none">No server found on this Wi-Fi. Scan the QR code from `opencode pair --remote`, or enter the address printed by `opencode web`.</string>
