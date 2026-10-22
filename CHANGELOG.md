@@ -2,6 +2,19 @@
 
 All notable changes to OCDroid. Older release notes are in [`release-notes/`](release-notes/).
 
+## [0.3.1] - 2026-10-23
+
+### Fixed
+
+- Command-palette button now also sets `margin-left`, keeping spacing on older Android WebView
+  builds that do not support `margin-inline-start`
+- README hero graphic uses a standard `font-weight`
+
+### Changed
+
+- GitHub Actions upgraded to v5 for `checkout`, `setup-java`, `setup-gradle`, and
+  `upload-artifact`
+
 ## [0.3.0] - 2026-10-23
 
 ### Added
@@ -59,6 +72,7 @@ All notable changes to OCDroid. Older release notes are in [`release-notes/`](re
 - Server discovery, QR pairing, encrypted credentials
 - Bundled official web assets and background notifications
 
+[0.3.1]: https://github.com/anik-amd/ocdroid/releases/tag/v0.3.1
 [0.3.0]: https://github.com/anik-amd/ocdroid/releases/tag/v0.3.0
 [0.2.1]: https://github.com/anik-amd/ocdroid/releases/tag/v0.2.1
 [0.2.0]: https://github.com/anik-amd/ocdroid/releases/tag/v0.2.0
