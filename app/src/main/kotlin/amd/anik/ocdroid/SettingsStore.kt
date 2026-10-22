@@ -88,7 +88,8 @@ class SettingsStore(context: Context) {
 
 private val SCHEME = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://")
 private val PRIVATE_HOST = Regex(
-    "^(localhost|127\\.|10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|.*\\.local)(:\\d+)?$",
+    "^(localhost|127\\.\\d+\\.\\d+\\.\\d+|10\\.\\d+\\.\\d+\\.\\d+|192\\.168\\.\\d+\\.\\d+" +
+        "|172\\.(1[6-9]|2[0-9]|3[01])\\.\\d+\\.\\d+|\\[?::1\\]?|.*\\.local)(:\\d+)?$",
     RegexOption.IGNORE_CASE,
 )
 
