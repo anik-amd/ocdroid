@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "dev.anika.ocdroid"
+    namespace = "amd.anik.ocdroid"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "dev.anika.ocdroid"
+        applicationId = "amd.anik.ocdroid"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -90,4 +90,5 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 }

@@ -43,4 +43,31 @@
     <string name="invalid_url">Enter a valid http:// or https:// URL</string>
     <string name="bundled_ui">Bundled web UI</string>
     <string name="bundled_ui_desc">Load the official web client from the APK instead of the network. Falls back automatically after a server update.</string>
+
+    <string name="discover_button">Find on Wi-Fi</string>
+    <string name="scan_qr_button">Scan pairing QR</string>
+    <string name="help_button">How to find my server</string>
+    <string name="find_another">Find another server</string>
+    <string name="or_manual">Or enter an address manually:</string>
+    <string name="discovering">Searching your Wi-Fi for OpenCode…</string>
+    <string name="discovery_checking">Checking %1$d addresses on your network…</string>
+    <string name="discovery_none">No server found on this Wi-Fi. Scan the QR code from `opencode pair --remote`, or enter the address printed by `opencode web`.</string>
+    <string name="discovery_found">Found %1$d server(s). Tap one to connect.</string>
+    <string name="discovery_auth">Enter the password for %1$s and tap the server again.</string>
+    <string name="discovery_failed">Discovery stopped. Check that Wi-Fi is connected and try again.</string>
+    <string name="discovery_found_manual">Address filled in. Enter the password if needed, then tap Connect.</string>
+    <string name="server_needs_password">This server needs a password. Enter it and tap Connect.</string>
+    <string name="source_mdns">Wi-Fi discovery</string>
+    <string name="source_lan">Local network</string>
+    <string name="source_loopback">This device</string>
+    <string name="pairing_progress">Pairing with your OpenCode server…</string>
+    <string name="pairing_expired">That pairing link expired or was already used. Run `opencode pair` again to print a new one.</string>
+    <string name="pairing_unreachable">Could not reach the server. Check the address and your network connection.</string>
+    <string name="pairing_unsupported">Pairing requires OpenCode v2. Enter the server address manually instead.</string>
+    <string name="pairing_invalid">That is not an OpenCode pairing link or QR code.</string>
+    <string name="pairing_success">Paired with %1$s</string>
+    <string name="camera_permission">Camera permission is required to scan the pairing QR code.</string>
+    <string name="scan_prompt">Scan the QR code from `opencode pair`</string>
+    <string name="help_title">Connect to OpenCode</string>
+    <string name="help_text">On the computer running OpenCode:\n\n  1. Make it discoverable on your Wi-Fi:\n     opencode web --mdns\n\n  Or use a fixed port:\n     opencode web --hostname 0.0.0.0 --port 4096\n\n  2. Set a password before starting (recommended):\n     OPENCODE_SERVER_PASSWORD=your-password\n\n  3. Keep the phone on the same Wi-Fi and tap “Find on Wi-Fi”.\n\nFrom anywhere (OpenTunnel):\n  1. Run: opencode pair --remote\n  2. Scan the QR code, or paste the printed link.\n  Pairing links work once and expire after 5 minutes.\n\nFind the computer’s address:\n  Windows: ipconfig\n  macOS/Linux: ifconfig or ip addr\n\nNotes:\n  • The phone cannot use “localhost”: that means the phone itself.\n  • OpenCode binds to 127.0.0.1 by default, so you must start it with --hostname 0.0.0.0 or --mdns.\n  • WSL and Docker users must forward the port to the host machine.\n  • mDNS discovery needs the computer and phone on the same network.</string>
 </resources>

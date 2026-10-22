@@ -1,4 +1,4 @@
-package dev.anika.ocdroid
+package amd.anik.ocdroid
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.DownloadListener
@@ -19,6 +20,8 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,7 +32,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import okhttp3.Credentials
 
@@ -44,10 +51,39 @@ class MainActivity : AppCompatActivity() {
     private lateinit var urlInput: TextInputEditText
     private lateinit var usernameInput: TextInputEditText
     private lateinit var passwordInput: TextInputEditText
+    private lateinit var discoveryStatus: TextView
+    private lateinit var discoveryResults: LinearLayout
 
     private var loadedUrl: String? = null
     private var versionChecked = false
+    private var discoveryJob: Job? = null
     private var fileChooserCallback: android.webkit.ValueCallback<Array<Uri>>? = null
+
+    private val cameraPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            launchScanner()
+        } else {
+            Toast.makeText(this, R.string.camera_permission, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private val scanLauncher = registerForActivityResult(ScanContract()) { result ->
+        val contents = result.contents ?: return@registerForActivityResult
+        val payload = Pairing.parse(contents)
+        if (payload != null) {
+            startPairing(payload)
+            return@registerForActivityResult
+        }
+        val manual = normalizeServerUrl(contents)
+        if (manual != null) {
+            urlInput.setText(manual)
+            Toast.makeText(this, R.string.discovery_found_manual, Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, R.string.pairing_invalid, Toast.LENGTH_LONG).show()
+        }
+    }
 
     private val fileChooser = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -72,6 +108,8 @@ class MainActivity : AppCompatActivity() {
         urlInput = findViewById(R.id.urlInput)
         usernameInput = findViewById(R.id.usernameInput)
         passwordInput = findViewById(R.id.passwordInput)
+        discoveryStatus = findViewById(R.id.discoveryStatus)
+        discoveryResults = findViewById(R.id.discoveryResults)
 
         configureWebView()
 
@@ -79,6 +117,12 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.retryButton).setOnClickListener {
             offlinePanel.isVisible = false
             loadServer()
+        }
+        findViewById<MaterialButton>(R.id.discoverButton).setOnClickListener { startDiscovery() }
+        findViewById<MaterialButton>(R.id.scanButton).setOnClickListener { scanPairingCode() }
+        findViewById<MaterialButton>(R.id.helpButton).setOnClickListener { showHelp() }
+        findViewById<MaterialButton>(R.id.findServerButton).setOnClickListener {
+            showSetup(runDiscovery = true)
         }
 
         urlInput.setText(settings.serverUrl)
@@ -90,6 +134,7 @@ class MainActivity : AppCompatActivity() {
             loadServer()
         } else {
             showSetup()
+            startDiscovery()
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -122,14 +167,172 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showSetup() {
+    private fun showSetup(runDiscovery: Boolean = false) {
         setupPanel.isVisible = true
         offlinePanel.isVisible = false
         progress.isVisible = false
+        if (runDiscovery) startDiscovery()
+    }
+
+    private fun startDiscovery() {
+        if (discoveryJob?.isActive == true) return
+
+        val username = usernameInput.text?.toString()?.ifBlank { settings.username } ?: settings.username
+        val password = passwordInput.text?.toString().orEmpty()
+        discoveryResults.removeAllViews()
+        discoveryStatus.isVisible = true
+        discoveryStatus.text = getString(R.string.discovering)
+
+        val discovery = ServerDiscovery(this, username, password)
+        discoveryJob = lifecycleScope.launch {
+            val found = try {
+                discovery.discover { message ->
+                    runOnUiThread {
+                        if (!isFinishing) discoveryStatus.text = message
+                    }
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+            if (isFinishing) return@launch
+
+            discoveryStatus.text = if (found.isEmpty()) {
+                getString(R.string.discovery_none)
+            } else {
+                getString(R.string.discovery_found, found.size)
+            }
+            found.forEach(::addDiscoveryResult)
+        }
+    }
+
+    private fun addDiscoveryResult(server: DiscoveredServer) {
+        val source = when (server.source) {
+            DiscoveredServer.Source.MDNS -> getString(R.string.source_mdns)
+            DiscoveredServer.Source.LAN -> getString(R.string.source_lan)
+            DiscoveredServer.Source.LOOPBACK -> getString(R.string.source_loopback)
+        }
+        val label = buildString {
+            append(server.url)
+            append("  ·  ")
+            append(source)
+            if (!server.version.isNullOrBlank()) {
+                append("  ·  v")
+                append(server.version)
+            }
+            if (server.requiresPassword) append("  ·  password")
+        }
+        val button = MaterialButton(
+            this,
+            null,
+            com.google.android.material.R.attr.materialButtonOutlinedStyle,
+        ).apply {
+            text = label
+            textAllCaps = false
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            setOnClickListener { chooseServer(server) }
+        }
+        val margin = (8 * resources.displayMetrics.density).toInt()
+        discoveryResults.addView(
+            button,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = margin },
+        )
+    }
+
+    private fun chooseServer(server: DiscoveredServer) {
+        urlInput.setText(server.url)
+        if (server.requiresPassword && passwordInput.text.isNullOrEmpty()) {
+            passwordInput.requestFocus()
+            discoveryStatus.text = getString(R.string.discovery_auth, server.url)
+            return
+        }
+        saveAndConnect()
+    }
+
+    private fun scanPairingCode() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            launchScanner()
+        } else {
+            cameraPermission.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun launchScanner() {
+        val options = ScanOptions().apply {
+            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            setPrompt(getString(R.string.scan_prompt))
+            setBeepEnabled(false)
+            setOrientationLocked(false)
+            setBarcodeImageEnabled(false)
+        }
+        runCatching { scanLauncher.launch(options) }
+            .onFailure { Toast.makeText(this, R.string.pairing_invalid, Toast.LENGTH_LONG).show() }
+    }
+
+    private fun startPairing(payload: PairingPayload) {
+        discoveryStatus.isVisible = true
+        discoveryStatus.text = getString(R.string.pairing_progress)
+        setDiscoveryBusy(true)
+        discoveryJob?.cancel()
+
+        lifecycleScope.launch {
+            val result = Pairing.redeem(payload, "opencode")
+            setDiscoveryBusy(false)
+            when (result) {
+                is PairingResult.Paired -> {
+                    settings.save(result.url, "opencode", result.token)
+                    urlInput.setText(result.url)
+                    usernameInput.setText("opencode")
+                    passwordInput.setText(result.token)
+                    setupPanel.isVisible = false
+                    offlinePanel.isVisible = false
+                    loadServer()
+                    if (settings.notificationsEnabled && settings.backgroundMonitoring) {
+                        MonitorService.start(this@MainActivity)
+                    }
+                    Toast.makeText(
+                        this@MainActivity,
+                        getString(R.string.pairing_success, result.url),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                PairingResult.Expired -> discoveryStatus.text = getString(R.string.pairing_expired)
+                PairingResult.Unsupported -> discoveryStatus.text = getString(R.string.pairing_unsupported)
+                PairingResult.Unreachable -> discoveryStatus.text = getString(R.string.pairing_unreachable)
+            }
+        }
+    }
+
+    private fun setDiscoveryBusy(busy: Boolean) {
+        findViewById<MaterialButton>(R.id.discoverButton).isEnabled = !busy
+        findViewById<MaterialButton>(R.id.scanButton).isEnabled = !busy
+        findViewById<MaterialButton>(R.id.connectButton).isEnabled = !busy
+    }
+
+    private fun showHelp() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.help_title)
+            .setMessage(R.string.help_text)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun saveAndConnect() {
-        val normalized = normalizeServerUrl(urlInput.text?.toString().orEmpty())
+        val raw = urlInput.text?.toString().orEmpty().trim()
+        Pairing.parse(raw)?.let {
+            startPairing(it)
+            return
+        }
+        if (raw.contains("/auth/connect/", ignoreCase = true) || raw.startsWith("{")) {
+            Toast.makeText(this, R.string.pairing_invalid, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val normalized = normalizeServerUrl(raw)
         if (normalized == null) {
             Toast.makeText(this, R.string.invalid_url, Toast.LENGTH_LONG).show()
             return
@@ -225,6 +428,11 @@ class MainActivity : AppCompatActivity() {
                     handler.proceed(settings.username, settings.password)
                 } else {
                     handler.cancel()
+                    if (host == serverHost) {
+                        showSetup()
+                        discoveryStatus.isVisible = true
+                        discoveryStatus.text = getString(R.string.server_needs_password)
+                    }
                 }
             }
         }

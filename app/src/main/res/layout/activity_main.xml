@@ -49,6 +49,70 @@
                 android:textColor="#A8B3C7"
                 android:textSize="14sp" />
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/discoverButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/discover_button"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    app:cornerRadius="12dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/scanButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="#182033"
+                    android:text="@string/scan_qr_button"
+                    android:textAllCaps="false"
+                    android:textColor="#F5F7FA"
+                    android:textSize="13sp"
+                    app:cornerRadius="12dp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/discoveryStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="#A8B3C7"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/discoveryResults"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="vertical" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/helpButton"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/help_button"
+                android:textAllCaps="false"
+                android:textColor="#7C9CFF" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/or_manual"
+                android:textColor="#78859B"
+                android:textSize="12sp" />
+
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -147,13 +211,29 @@
             android:textColor="#A8B3C7"
             android:textSize="13sp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/retryButton"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="@string/retry"
-            android:textAllCaps="false"
-            app:cornerRadius="12dp" />
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/retryButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/retry"
+                android:textAllCaps="false"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/findServerButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/find_another"
+                android:textAllCaps="false"
+                app:cornerRadius="12dp" />
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

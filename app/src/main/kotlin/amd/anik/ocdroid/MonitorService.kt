@@ -1,4 +1,4 @@
-package dev.anika.ocdroid
+package amd.anik.ocdroid
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -355,7 +355,7 @@ class MonitorService : Service() {
         private const val CHANNEL_MONITORING = "monitoring"
         private const val CHANNEL_TASKS = "tasks"
         private const val CHANNEL_PERMISSIONS = "permissions"
-        private const val ACTION_STOP = "dev.anika.ocdroid.STOP_MONITOR"
+        private const val ACTION_STOP = "amd.anik.ocdroid.STOP_MONITOR"
         private val STREAM_PATHS = listOf("/api/event", "/event")
         private val statusRegex =
             Regex("\"status\"\\s*:\\s*\\{\\s*\"type\"\\s*:\\s*\"(busy|idle|retry)\"")

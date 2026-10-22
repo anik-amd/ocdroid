@@ -8,7 +8,7 @@
         android:shortcutShortLabel="@string/open_settings">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetClass="dev.anika.ocdroid.SettingsActivity"
-            android:targetPackage="dev.anika.ocdroid" />
+            android:targetClass="amd.anik.ocdroid.SettingsActivity"
+            android:targetPackage="amd.anik.ocdroid" />
     </shortcut>
 </shortcuts>

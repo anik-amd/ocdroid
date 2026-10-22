@@ -1,4 +1,4 @@
-package dev.anika.ocdroid
+package amd.anik.ocdroid
 
 import android.os.Bundle
 import android.webkit.WebView

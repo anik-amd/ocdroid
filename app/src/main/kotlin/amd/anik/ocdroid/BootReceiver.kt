@@ -1,4 +1,4 @@
-package dev.anika.ocdroid
+package amd.anik.ocdroid
 
 import android.content.BroadcastReceiver
 import android.content.Context

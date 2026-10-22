@@ -1,0 +1,127 @@
+package amd.anik.ocdroid
+
+import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
+import java.util.concurrent.TimeUnit
+
+/**
+ * Parses and redeems the pairing links and QR codes printed by `opencode pair`.
+ *
+ * OpenCode accepts `GET /auth/connect/<code>` with `Accept: application/json` and returns a
+ * session token. That token is accepted anywhere the server password is, so OCDroid can
+ * store it as the password and keep using ordinary Basic auth in the WebView.
+ */
+data class PairingPayload(
+    val urls: List<String>,
+    val code: String,
+)
+
+sealed interface PairingResult {
+    data class Paired(val url: String, val token: String) : PairingResult
+    data object Expired : PairingResult
+    data object Unreachable : PairingResult
+    data object Unsupported : PairingResult
+}
+
+object Pairing {
+
+    private val codePattern = Regex("[A-Za-z0-9_-]+")
+
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(4, TimeUnit.SECONDS)
+        .readTimeout(5, TimeUnit.SECONDS)
+        .callTimeout(8, TimeUnit.SECONDS)
+        .followRedirects(false)
+        .build()
+
+    fun parse(text: String): PairingPayload? {
+        val trimmed = text.trim()
+        if (trimmed.startsWith("{")) return parseQrPayload(trimmed)
+        return parseLink(trimmed)
+    }
+
+    private fun parseQrPayload(text: String): PairingPayload? {
+        val json = runCatching { JSONObject(text) }.getOrNull() ?: return null
+        val code = json.optString("code")
+        if (!codePattern.matches(code)) return null
+        val array = json.optJSONArray("urls") ?: return null
+        val urls = buildList {
+            for (index in 0 until array.length()) {
+                normalizeServerUrl(array.optString(index))?.let(::add)
+            }
+        }.distinct()
+        if (urls.isEmpty()) return null
+        return PairingPayload(urls, code)
+    }
+
+    private fun parseLink(text: String): PairingPayload? {
+        val uri = runCatching { Uri.parse(text) }.getOrNull() ?: return null
+        if (uri.scheme != "http" && uri.scheme != "https") return null
+        val segments = uri.pathSegments
+        if (segments.size != 3 || segments[0] != "auth" || segments[1] != "connect") return null
+        val code = segments[2]
+        if (!codePattern.matches(code)) return null
+        val origin = normalizeServerUrl("${uri.scheme}://${uri.authority}") ?: return null
+        return PairingPayload(listOf(origin), code)
+    }
+
+    suspend fun redeem(payload: PairingPayload, username: String = "opencode"): PairingResult =
+        withContext(Dispatchers.IO) {
+            var unreachable = false
+            var unsupported = false
+            for (url in payload.urls) {
+                when (val result = redeemOne(url, payload.code)) {
+                    is PairingResult.Paired -> {
+                        val verified = verify(url, result.token, username)
+                        return@withContext if (verified) result else PairingResult.Unreachable
+                    }
+                    PairingResult.Expired -> return@withContext PairingResult.Expired
+                    PairingResult.Unsupported -> unsupported = true
+                    PairingResult.Unreachable -> unreachable = true
+                }
+            }
+            when {
+                unsupported -> PairingResult.Unsupported
+                unreachable -> PairingResult.Unreachable
+                else -> PairingResult.Unreachable
+            }
+        }
+
+    private fun redeemOne(base: String, code: String): PairingResult {
+        val request = Request.Builder()
+            .url("$base/auth/connect/$code")
+            .header("Accept", "application/json")
+            .build()
+        val response = runCatching { client.newCall(request).execute() }.getOrNull()
+            ?: return PairingResult.Unreachable
+        response.use {
+            return when {
+                it.code in 200..299 -> {
+                    val token = runCatching {
+                        JSONObject(it.peekBody(64 * 1024).string()).optString("token")
+                    }.getOrNull().orEmpty()
+                    if (token.isBlank()) PairingResult.Unsupported
+                    else PairingResult.Paired(base, token)
+                }
+                it.code == 401 || it.code == 410 -> PairingResult.Expired
+                it.code == 404 -> PairingResult.Unsupported
+                else -> PairingResult.Unreachable
+            }
+        }
+    }
+
+    private fun verify(base: String, token: String, username: String): Boolean {
+        val request = Request.Builder()
+            .url("$base/api/info")
+            .header("Accept", "application/json")
+            .header("Authorization", okhttp3.Credentials.basic(username.ifBlank { "opencode" }, token))
+            .build()
+        return runCatching {
+            client.newCall(request).execute().use { it.code in 200..299 }
+        }.getOrDefault(false)
+    }
+}
