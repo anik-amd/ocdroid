@@ -23,7 +23,12 @@ object EventParser {
     private val shutdownRegex = Regex("\"reason\"\\s*:\\s*\"shutdown\"")
 
     fun parse(eventName: String, data: String): ParsedEvent {
-        val type = eventName.trim().ifBlank {
+        val name = eventName.trim()
+        // v1 SSE frames use a generic "event: message" line and put the real type in
+        // the JSON payload, so only a specific event name may override the payload.
+        val type = if (name.isNotBlank() && name.lowercase() != "message") {
+            name
+        } else {
             typeRegex.find(data)?.groupValues?.get(1).orEmpty()
         }.lowercase()
 

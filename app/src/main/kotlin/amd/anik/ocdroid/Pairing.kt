@@ -70,16 +70,15 @@ object Pairing {
         return PairingPayload(listOf(origin), code)
     }
 
-    suspend fun redeem(payload: PairingPayload, username: String = "opencode"): PairingResult =
+    suspend fun redeem(payload: PairingPayload): PairingResult =
         withContext(Dispatchers.IO) {
             var unreachable = false
             var unsupported = false
             for (url in payload.urls) {
                 when (val result = redeemOne(url, payload.code)) {
-                    is PairingResult.Paired -> {
-                        val verified = verify(url, result.token, username)
-                        return@withContext if (verified) result else PairingResult.Unreachable
-                    }
+                    // The server just issued this token; a second health check only adds a way
+                    // to throw a valid token away (for example when /api/info is proxied oddly).
+                    is PairingResult.Paired -> return@withContext result
                     PairingResult.Expired -> return@withContext PairingResult.Expired
                     PairingResult.Unsupported -> unsupported = true
                     PairingResult.Unreachable -> unreachable = true
@@ -91,6 +90,18 @@ object Pairing {
                 else -> PairingResult.Unreachable
             }
         }
+
+    /** True when this address only works on the computer that printed it. */
+    fun isLoopback(url: String): Boolean {
+        val host = runCatching { java.net.URI(url).host }.getOrNull()
+            ?.lowercase()
+            ?.removeSurrounding("[", "]")
+            ?: return false
+        return host == "localhost" ||
+            host == "::1" ||
+            host.endsWith(".localhost") ||
+            host.startsWith("127.")
+    }
 
     private fun redeemOne(base: String, code: String): PairingResult {
         val request = Request.Builder()
@@ -115,14 +126,4 @@ object Pairing {
         }
     }
 
-    private fun verify(base: String, token: String, username: String): Boolean {
-        val request = Request.Builder()
-            .url("$base/api/info")
-            .header("Accept", "application/json")
-            .header("Authorization", okhttp3.Credentials.basic(username.ifBlank { "opencode" }, token))
-            .build()
-        return runCatching {
-            client.newCall(request).execute().use { it.code in 200..299 }
-        }.getOrDefault(false)
-    }
 }

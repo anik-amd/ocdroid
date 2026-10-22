@@ -36,6 +36,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import okhttp3.Credentials
@@ -57,6 +58,7 @@ class MainActivity : AppCompatActivity() {
     private var loadedUrl: String? = null
     private var versionChecked = false
     private var discoveryJob: Job? = null
+    private var pairingInProgress = false
     private var fileChooserCallback: android.webkit.ValueCallback<Array<Uri>>? = null
 
     private val cameraPermission = registerForActivityResult(
@@ -81,7 +83,10 @@ class MainActivity : AppCompatActivity() {
             urlInput.setText(manual)
             Toast.makeText(this, R.string.discovery_found_manual, Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(this, R.string.pairing_invalid, Toast.LENGTH_LONG).show()
+            showPairingError(
+                getString(R.string.pairing_invalid) + "\n\n" +
+                    getString(R.string.pairing_scanned, contents.take(300)),
+            )
         }
     }
 
@@ -188,13 +193,15 @@ class MainActivity : AppCompatActivity() {
             val found = try {
                 discovery.discover { message ->
                     runOnUiThread {
-                        if (!isFinishing) discoveryStatus.text = message
+                        if (!isFinishing && !pairingInProgress) discoveryStatus.text = message
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 emptyList()
             }
-            if (isFinishing) return@launch
+            if (isFinishing || pairingInProgress) return@launch
 
             discoveryStatus.text = if (found.isEmpty()) {
                 getString(R.string.discovery_none)
@@ -274,13 +281,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startPairing(payload: PairingPayload) {
+        pairingInProgress = true
+        setupPanel.isVisible = true
+        offlinePanel.isVisible = false
         discoveryStatus.isVisible = true
         discoveryStatus.text = getString(R.string.pairing_progress)
         setDiscoveryBusy(true)
         discoveryJob?.cancel()
 
         lifecycleScope.launch {
-            val result = Pairing.redeem(payload, "opencode")
+            val result = try {
+                Pairing.redeem(payload)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                PairingResult.Unreachable
+            }
+            pairingInProgress = false
             setDiscoveryBusy(false)
             when (result) {
                 is PairingResult.Paired -> {
@@ -300,11 +317,37 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_SHORT,
                     ).show()
                 }
-                PairingResult.Expired -> discoveryStatus.text = getString(R.string.pairing_expired)
-                PairingResult.Unsupported -> discoveryStatus.text = getString(R.string.pairing_unsupported)
-                PairingResult.Unreachable -> discoveryStatus.text = getString(R.string.pairing_unreachable)
+                PairingResult.Expired -> {
+                    val message = getString(R.string.pairing_expired)
+                    discoveryStatus.text = message
+                    showPairingError(message)
+                }
+                PairingResult.Unsupported -> {
+                    val message = getString(R.string.pairing_unsupported)
+                    discoveryStatus.text = message
+                    showPairingError(message)
+                }
+                PairingResult.Unreachable -> {
+                    val loopbackOnly = payload.urls.isNotEmpty() && payload.urls.all { Pairing.isLoopback(it) }
+                    val message = if (loopbackOnly) {
+                        getString(R.string.pairing_loopback)
+                    } else {
+                        getString(R.string.pairing_unreachable)
+                    }
+                    discoveryStatus.text = message
+                    showPairingError(message)
+                }
             }
         }
+    }
+
+    private fun showPairingError(message: String) {
+        if (isFinishing) return
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.pairing_failed_title)
+            .setMessage(message)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun setDiscoveryBusy(busy: Boolean) {
@@ -404,6 +447,8 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView, url: String?) {
                 progress.isVisible = false
+                // Re-applied per document; the SPA keeps this listener across in-app navigation.
+                view.evaluateJavascript(WebViewPatches.ENTER_INSERTS_NEWLINE, null)
             }
 
             override fun onReceivedError(

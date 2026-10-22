@@ -118,6 +118,26 @@
                 android:textSize="12sp" />
 
             <TextView
+                android:id="@+id/monitorStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="#111827"
+                android:padding="12dp"
+                android:textColor="#A8B3C7"
+                android:textSize="12sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/testNotificationButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/test_notification_button"
+                android:textAllCaps="false"
+                app:cornerRadius="12dp" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"

@@ -1,8 +1,13 @@
 package amd.anik.ocdroid
 
+import kotlinx.coroutines.runBlocking
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PairingTest {
@@ -53,5 +58,51 @@ class PairingTest {
     fun leavesOrdinaryServerUrlsAlone() {
         assertNull(Pairing.parse("https://example.com"))
         assertNull(Pairing.parse("http://192.168.1.5:4096"))
+    }
+
+    @Test
+    fun identifiesLoopbackAddresses() {
+        assertTrue(Pairing.isLoopback("http://127.0.0.1:4096"))
+        assertTrue(Pairing.isLoopback("http://localhost:4096/auth/connect/abc"))
+        assertTrue(Pairing.isLoopback("http://[::1]:4096"))
+        assertFalse(Pairing.isLoopback("http://192.168.1.5:4096"))
+        assertFalse(Pairing.isLoopback("https://abc.opentunnel.xyz"))
+    }
+
+    @Test
+    fun redeemsTokenWithoutASecondHealthCheck() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("""{"token":"pair-token"}"""),
+        )
+        server.start()
+        try {
+            val base = server.url("/").toString().trimEnd('/')
+            val result = Pairing.redeem(PairingPayload(listOf(base), "abc_123"))
+            assertTrue(result is PairingResult.Paired)
+            assertEquals("pair-token", (result as PairingResult.Paired).token)
+            assertEquals("/auth/connect/abc_123", server.takeRequest().path)
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun reportsExpiredPairingCode() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setResponseCode(401))
+        server.start()
+        try {
+            val base = server.url("/").toString().trimEnd('/')
+            assertEquals(
+                PairingResult.Expired,
+                Pairing.redeem(PairingPayload(listOf(base), "spent")),
+            )
+        } finally {
+            server.shutdown()
+        }
     }
 }

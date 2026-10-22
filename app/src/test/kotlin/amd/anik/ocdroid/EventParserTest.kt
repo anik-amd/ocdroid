@@ -30,6 +30,16 @@ class EventParserTest {
     }
 
     @Test
+    fun genericSseEventNameUsesPayloadType() {
+        val event = EventParser.parse(
+            "message",
+            """{"type":"session.status","data":{"sessionID":"ses_9","status":{"type":"idle"}}}""",
+        )
+        assertEquals("session.status", event.type)
+        assertEquals("idle", event.status)
+    }
+
+    @Test
     fun parsesBusyStatusForV1Fallback() {
         val event = EventParser.parse(
             "",

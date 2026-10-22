@@ -23,10 +23,13 @@ There is no custom chat UI. The interface is the official OpenCode web app.
 GitHub Actions builds a signed APK on every push to `main`:
 
 - Workflow: [`Build OCDroid APK`](.github/workflows/build.yml)
-- Latest APK: https://github.com/anik-amd/ocdroid/releases/tag/latest-build
+- Latest release: https://github.com/anik-amd/ocdroid/releases/latest
+- Download: `OCDroid.apk` under the newest **OCDroid v…** release
 
 The workflow mirrors the web client from the server, builds with JDK 17, signs with the repo's
-keystore secrets, and publishes `OCDroid.apk` to the rolling release.
+keystore secrets, and publishes `OCDroid.apk` to a normal versioned release (for example
+`OCDroid v0.1.0`). The version comes from `versionName` in `app/build.gradle.kts`, and the
+release body comes from `release-notes/OCDroid_<version>.md`.
 
 You can also open the repository in a Codespace; `.devcontainer/` installs JDK 17, Android SDK 34
 and Node, then mirrors the web assets and builds a debug APK.

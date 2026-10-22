@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ocdroid-main-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,6 +29,14 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Read app version
+        id: version
+        run: |
+          VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing OCDroid v$VERSION"
 
       - name: Mirror official web client
         env:
@@ -70,15 +82,15 @@ jobs:
           path: dist/OCDroid.apk
           if-no-files-found: error
 
-      - name: Publish rolling build
+      - name: Publish versioned release
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest-build
-          name: OCDroid latest build
-          prerelease: true
-          make_latest: false
-          body: |
-            Automatic signed build from `${{ github.sha }}`.
-            Download `OCDroid.apk` below and install it on your Android device.
+          tag_name: v${{ steps.version.outputs.version }}
+          name: OCDroid v${{ steps.version.outputs.version }}
+          body_path: release-notes/OCDroid_${{ steps.version.outputs.version }}.md
+          prerelease: false
+          make_latest: true
+          overwrite_files: true
+          fail_on_unmatched_files: true
           files: dist/OCDroid.apk
