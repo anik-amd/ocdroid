@@ -123,6 +123,7 @@ object WebViewPatches {
                 var form = input.closest('form');
                 var button = form && form.querySelector('button[type="submit"]');
                 if (button) button.click();
+                else if (form && form.requestSubmit) form.requestSubmit();
               }, 500);
             }, 250);
             setTimeout(function () { clearInterval(timer); }, 15000);

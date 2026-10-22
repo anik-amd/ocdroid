@@ -42,6 +42,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import okhttp3.Credentials
+import org.json.JSONArray
 import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
@@ -92,7 +93,7 @@ class MainActivity : AppCompatActivity() {
         val contents = result.contents ?: return@registerForActivityResult
         val payload = Pairing.parse(contents)
         if (payload != null) {
-            beginOfficialPairing(contents, payload)
+            beginOfficialPairing(payload)
             return@registerForActivityResult
         }
         val manual = normalizeServerUrl(contents)
@@ -312,7 +313,7 @@ class MainActivity : AppCompatActivity() {
      * previous flow redeemed the code natively, which consumed it before the web client could
      * establish its own signed-in server entry, so the web app still showed its login screen.
      */
-    private fun beginOfficialPairing(raw: String, payload: PairingPayload) {
+    private fun beginOfficialPairing(payload: PairingPayload) {
         val target = Pairing.preferredServer(payload)
         if (target == null) {
             val message = getString(R.string.pairing_loopback)
@@ -322,7 +323,16 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        pendingConnectValue = raw.trim()
+        pendingConnectValue = JSONObject()
+            .put("code", payload.code)
+            .put(
+                "urls",
+                JSONArray(
+                    (listOf(target) + payload.urls.filter { it != target })
+                        .distinct(),
+                ),
+            )
+            .toString()
         discoveryJob?.cancel()
         MonitorService.stop(this)
         settings.save(target, "opencode", "")
@@ -354,7 +364,7 @@ class MainActivity : AppCompatActivity() {
     private fun saveAndConnect() {
         val raw = urlInput.text?.toString().orEmpty().trim()
         Pairing.parse(raw)?.let {
-            beginOfficialPairing(raw, it)
+            beginOfficialPairing(it)
             return
         }
         if (raw.contains("/auth/connect/", ignoreCase = true) || raw.startsWith("{")) {
@@ -599,8 +609,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isServerOrigin(origin: Uri): Boolean {
-        val serverHost = runCatching { Uri.parse(settings.serverUrl).host }.getOrNull() ?: return false
-        return origin.host == serverHost
+        val serverHost = runCatching { Uri.parse(settings.serverUrl).host }.getOrNull()
+        val currentHost = runCatching { webView.url?.let { Uri.parse(it).host } }.getOrNull()
+        return origin.host != null && (origin.host == serverHost || origin.host == currentHost)
     }
 
     /**
