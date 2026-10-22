@@ -32,7 +32,7 @@
       <circle cx="18" cy="15" r="4" fill="#34d399"/>
       <text x="32" y="20" fill="#c7d2fe" font-size="13" font-weight="600" letter-spacing="0.4">ANDROID • OPEN SOURCE</text>
 
-      <text x="0" y="104" fill="#f8fafc" font-size="64" font-weight="750" letter-spacing="-2">OCDroid</text>
+      <text x="0" y="104" fill="#f8fafc" font-size="64" font-weight="700" letter-spacing="-2">OCDroid</text>
       <text x="0" y="154" fill="#e2e8f0" font-size="27" font-weight="500">The official OpenCode web UI,</text>
       <text x="0" y="188" fill="#94a3b8" font-size="27" font-weight="500">in your pocket.</text>
 

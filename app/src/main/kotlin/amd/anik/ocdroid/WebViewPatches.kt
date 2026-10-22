@@ -79,6 +79,7 @@ object WebViewPatches {
               button.setAttribute('aria-label', 'Open command palette');
               button.title = 'Command palette';
               button.style.marginInlineStart = '2px';
+              button.style.marginLeft = '2px';
               button.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false" data-slot="icon-svg"><path d="M6 6H4.75a1.75 1.75 0 1 1 1.75-1.75V6Zm0 0v4m0-4h4m-4 4H4.75A1.75 1.75 0 1 0 6.5 11.75V10Zm4-4V4.25A1.75 1.75 0 1 1 11.75 6H10Zm0 0v4m0-4h1.75A1.75 1.75 0 1 1 10 11.75V10Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
               button.addEventListener('click', function (event) {
                 event.preventDefault();
