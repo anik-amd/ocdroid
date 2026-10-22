@@ -13,8 +13,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import kotlinx.coroutines.withContext
-import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -45,8 +43,6 @@ data class DiscoveredServer(
  */
 class ServerDiscovery(
     private val context: Context,
-    private val username: String,
-    private val password: String,
 ) {
 
     private val client = OkHttpClient.Builder()
@@ -196,9 +192,8 @@ class ServerDiscovery(
         val builder = Request.Builder()
             .url(url)
             .header("Accept", "application/json, text/html;q=0.8")
-        if (password.isNotEmpty()) {
-            builder.header("Authorization", Credentials.basic(username.ifBlank { "opencode" }, password))
-        }
+        // Never send credentials while probing. A password/token must not be broadcast to
+        // every host on the LAN just to discover which one is running OpenCode.
         client.newCall(builder.build()).execute().use { response ->
             HttpResult(
                 code = response.code,

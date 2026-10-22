@@ -210,13 +210,13 @@ class MainActivity : AppCompatActivity() {
     private fun startDiscovery() {
         if (discoveryJob?.isActive == true) return
 
-        val username = usernameInput.text?.toString()?.ifBlank { settings.username } ?: settings.username
-        val password = passwordInput.text?.toString().orEmpty()
         discoveryResults.removeAllViews()
         discoveryStatus.isVisible = true
         discoveryStatus.text = getString(R.string.discovering)
 
-        val discovery = ServerDiscovery(this, username, password)
+        // Discovery deliberately runs without credentials. The password/token is only sent
+        // after the user chooses a server, never to every address on the local network.
+        val discovery = ServerDiscovery(this)
         discoveryJob = lifecycleScope.launch {
             val found = try {
                 discovery.discover { message ->
@@ -399,8 +399,12 @@ class MainActivity : AppCompatActivity() {
         webSettings.allowContentAccess = false
         webSettings.loadsImagesAutomatically = true
         webSettings.mediaPlaybackRequiresUserGesture = false
-        webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+        webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
         webSettings.setSupportMultipleWindows(false)
+        webSettings.javaScriptCanOpenWindowsAutomatically = false
+        webSettings.setGeolocationEnabled(false)
+        webSettings.allowFileAccessFromFileURLs = false
+        webSettings.allowUniversalAccessFromFileURLs = false
         webSettings.builtInZoomControls = false
         webSettings.displayZoomControls = false
         webSettings.textZoom = 100
@@ -415,7 +419,7 @@ class MainActivity : AppCompatActivity() {
 
         CookieManager.getInstance().apply {
             setAcceptCookie(true)
-            setAcceptThirdPartyCookies(webView, true)
+            setAcceptThirdPartyCookies(webView, false)
         }
 
         webView.setBackgroundColor(0xFF0B0F17.toInt())
@@ -427,15 +431,15 @@ class MainActivity : AppCompatActivity() {
                 request: WebResourceRequest
             ): WebResourceResponse? {
                 if (request.method != "GET") return null
-                val serverHost = runCatching { Uri.parse(settings.serverUrl).host }.getOrNull()
-                if (request.url.host != serverHost) return null
+                if (!isServerUrl(request.url.toString())) return null
                 return bundle.response(request.url, request.isForMainFrame)
             }
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val target = request.url
-                val serverHost = runCatching { Uri.parse(settings.serverUrl).host }.getOrNull()
-                if (target.host == serverHost) return false
+                if (isServerUrl(target.toString())) return false
+                val scheme = target.scheme?.lowercase()
+                if (scheme !in EXTERNAL_SCHEMES) return true
                 return openExternally(target)
             }
 
@@ -449,6 +453,7 @@ class MainActivity : AppCompatActivity() {
                 // Re-applied per document; the SPA keeps this listener across in-app navigation.
                 view.evaluateJavascript(WebViewPatches.ENTER_INSERTS_NEWLINE, null)
                 if (isServerUrl(url)) {
+                    view.evaluateJavascript(WebViewPatches.COMMAND_PALETTE, null)
                     val pending = pendingConnectValue
                     pendingConnectValue = null
                     view.evaluateJavascript(
@@ -480,12 +485,12 @@ class MainActivity : AppCompatActivity() {
                 host: String,
                 realm: String
             ) {
-                val serverHost = runCatching { Uri.parse(settings.serverUrl).host }.getOrNull()
-                if (host == serverHost && settings.password.isNotEmpty()) {
+                val serverHost = ServerOrigin.host(settings.serverUrl)
+                if (host.equals(serverHost, ignoreCase = true) && settings.password.isNotEmpty()) {
                     handler.proceed(settings.username, settings.password)
                 } else {
                     handler.cancel()
-                    if (host == serverHost) {
+                    if (host.equals(serverHost, ignoreCase = true)) {
                         showSetup()
                         discoveryStatus.isVisible = true
                         discoveryStatus.text = getString(R.string.server_needs_password)
@@ -545,20 +550,30 @@ class MainActivity : AppCompatActivity() {
 
         webView.setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
             runCatching {
-                val request = DownloadManager.Request(Uri.parse(url))
-                    .setMimeType(mimeType)
-                    .addRequestHeader("User-Agent", userAgent)
-                if (settings.password.isNotEmpty()) {
-                    request.addRequestHeader(
-                        "Authorization",
-                        Credentials.basic(settings.username, settings.password)
-                    )
+                val downloadUri = Uri.parse(url)
+                val scheme = downloadUri.scheme?.lowercase()
+                if (scheme != "http" && scheme != "https") {
+                    Toast.makeText(this, R.string.invalid_url, Toast.LENGTH_LONG).show()
+                } else {
+                    val request = DownloadManager.Request(downloadUri)
+                        .setMimeType(mimeType)
+                        .addRequestHeader("User-Agent", userAgent)
+                    // Never send the server token or cookies to an arbitrary download host. The
+                    // official client can link build artifacts or attachments from a CDN.
+                    if (isServerUrl(url)) {
+                        if (settings.password.isNotEmpty()) {
+                            request.addRequestHeader(
+                                "Authorization",
+                                Credentials.basic(settings.username, settings.password)
+                            )
+                        }
+                        CookieManager.getInstance().getCookie(url)?.let {
+                            request.addRequestHeader("Cookie", it)
+                        }
+                    }
+                    val manager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+                    manager.enqueue(request)
                 }
-                CookieManager.getInstance().getCookie(url)?.let {
-                    request.addRequestHeader("Cookie", it)
-                }
-                val manager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-                manager.enqueue(request)
             }.onFailure {
                 Toast.makeText(this, R.string.offline_title, Toast.LENGTH_LONG).show()
             }
@@ -574,7 +589,7 @@ class MainActivity : AppCompatActivity() {
         }
         runCatching {
             webView.setHttpAuthUsernamePassword(
-                Uri.parse(config.url).host.orEmpty(),
+                ServerOrigin.host(config.url).orEmpty(),
                 "",
                 config.username,
                 config.password,
@@ -604,14 +619,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun isServerUrl(url: String?): Boolean {
         if (url.isNullOrBlank()) return false
-        val serverHost = runCatching { Uri.parse(settings.serverUrl).host }.getOrNull() ?: return false
-        return runCatching { Uri.parse(url).host }.getOrNull() == serverHost
+        return ServerOrigin.same(settings.serverUrl, url)
     }
 
     private fun isServerOrigin(origin: Uri): Boolean {
-        val serverHost = runCatching { Uri.parse(settings.serverUrl).host }.getOrNull()
-        val currentHost = runCatching { webView.url?.let { Uri.parse(it).host } }.getOrNull()
-        return origin.host != null && (origin.host == serverHost || origin.host == currentHost)
+        return ServerOrigin.same(settings.serverUrl, origin.toString())
     }
 
     /**
@@ -697,5 +709,6 @@ class MainActivity : AppCompatActivity() {
 
     private companion object {
         val SESSION_ID = Regex("[A-Za-z0-9_-]{1,200}")
+        val EXTERNAL_SCHEMES = setOf("http", "https", "mailto", "tel")
     }
 }

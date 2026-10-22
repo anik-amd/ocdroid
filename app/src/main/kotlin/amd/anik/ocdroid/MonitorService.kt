@@ -306,7 +306,7 @@ class MonitorService : Service() {
             .setVibrate(vibration)
             .setPriority(priority)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .build()
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(id, notification)
@@ -454,7 +454,7 @@ class MonitorService : Service() {
                     vibrationPattern = TASK_VIBRATION
                     enableLights(true)
                     setShowBadge(true)
-                    lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                    lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 }
             )
             manager.createNotificationChannel(
@@ -469,7 +469,7 @@ class MonitorService : Service() {
                     vibrationPattern = ATTENTION_VIBRATION
                     enableLights(true)
                     setShowBadge(true)
-                    lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                    lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 }
             )
         }

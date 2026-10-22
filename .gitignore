@@ -43,7 +43,14 @@ captures/
 # Keystore files
 *.jks
 *.keystore
+*.p12
+*.pem
 app/keystore/
+signing.properties
+
+# Local environment and secrets
+.env
+.env.*
 
 # External native build folder
 .externalNativeBuild
@@ -57,10 +64,3 @@ lint/
 
 # Mirrored official web client (generated at build time)
 app/src/main/assets/web/
-
-# Fastlane
-fastlane/report.xml
-fastlane/Preview.html
-fastlane/screenshots
-fastlane/test_output
-fastlane/readme.md

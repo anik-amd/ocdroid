@@ -13,20 +13,54 @@ data class ServerConfig(
 
 class SettingsStore(context: Context) {
 
-    private val prefs: SharedPreferences = runCatching {
-        val masterKey = MasterKey.Builder(context)
+    private val appContext = context.applicationContext
+
+    /**
+     * Non-secret settings may live here if Android Keystore is unavailable. The password
+     * is never written to this file: it stays in encrypted storage or in memory only.
+     */
+    private val fallbackPrefs: SharedPreferences =
+        appContext.getSharedPreferences("ocdroid_fallback", Context.MODE_PRIVATE)
+
+    private val securePrefs: SharedPreferences? = runCatching {
+        val masterKey = MasterKey.Builder(appContext)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
         EncryptedSharedPreferences.create(
-            context,
+            appContext,
             "ocdroid_secure",
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
         )
-    }.getOrElse {
-        context.getSharedPreferences("ocdroid_fallback", Context.MODE_PRIVATE)
+    }.getOrNull()
+
+    private val prefs: SharedPreferences
+        get() = securePrefs ?: fallbackPrefs
+
+    @Volatile
+    private var memoryPassword: String = ""
+
+    init {
+        val legacyPassword = fallbackPrefs.getString(KEY_PASSWORD, null)
+        if (securePrefs != null) {
+            // Migrate a password left by older builds, then remove the plaintext copy.
+            if (!legacyPassword.isNullOrEmpty() &&
+                securePrefs.getString(KEY_PASSWORD, null).isNullOrEmpty()
+            ) {
+                securePrefs.edit().putString(KEY_PASSWORD, legacyPassword).apply()
+            }
+            fallbackPrefs.edit().remove(KEY_PASSWORD).apply()
+        } else if (!legacyPassword.isNullOrEmpty()) {
+            // Keystore failed: keep the session usable until process death, but never persist
+            // the token in plaintext.
+            memoryPassword = legacyPassword
+            fallbackPrefs.edit().remove(KEY_PASSWORD).apply()
+        }
     }
+
+    val encryptedStorage: Boolean
+        get() = securePrefs != null
 
     var serverUrl: String
         get() = prefs.getString(KEY_URL, null)?.takeIf { it.isNotBlank() }
@@ -39,8 +73,15 @@ class SettingsStore(context: Context) {
         set(value) = prefs.edit().putString(KEY_USERNAME, value.trim()).apply()
 
     var password: String
-        get() = prefs.getString(KEY_PASSWORD, null).orEmpty()
-        set(value) = prefs.edit().putString(KEY_PASSWORD, value).apply()
+        get() = securePrefs?.getString(KEY_PASSWORD, null) ?: memoryPassword
+        set(value) {
+            val secure = securePrefs
+            if (secure != null) {
+                secure.edit().putString(KEY_PASSWORD, value).apply()
+            } else {
+                memoryPassword = value
+            }
+        }
 
     var setupCompleted: Boolean
         get() = prefs.getBoolean(KEY_SETUP_COMPLETED, false)
@@ -72,7 +113,9 @@ class SettingsStore(context: Context) {
     }
 
     fun clearPassword() {
-        prefs.edit().remove(KEY_PASSWORD).apply()
+        securePrefs?.edit()?.remove(KEY_PASSWORD)?.apply()
+        memoryPassword = ""
+        fallbackPrefs.edit().remove(KEY_PASSWORD).apply()
     }
 
     companion object {

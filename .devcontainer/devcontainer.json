@@ -19,6 +19,6 @@
       }
     }
   },
-  "postCreateCommand": "chmod +x ./gradlew && node scripts/fetch-web-assets.mjs && ./gradlew --version",
+  "postCreateCommand": "chmod +x ./gradlew && if [ -n \"${OC_SERVER_URL:-}\" ]; then node scripts/fetch-web-assets.mjs; else echo 'OC_SERVER_URL not set; skipping the optional bundled web client.'; fi && ./gradlew --version",
   "postAttachCommand": "./gradlew :app:assembleDebug"
 }

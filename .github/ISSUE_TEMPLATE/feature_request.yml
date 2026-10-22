@@ -1,0 +1,60 @@
+name: Feature request
+description: Suggest a change that respects the official OpenCode web UI
+title: "[feat]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        OCDroid is a shell around the **official OpenCode web client**. Requests that replace the
+        chat UI with a native reimplementation are out of scope. Platform features, accessibility,
+        pairing, notifications and small compatibility patches are in scope.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what gets in the way?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the smallest change that solves it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Pairing / login
+        - Discovery / networking
+        - Notifications
+        - Command palette
+        - Settings
+        - Bundled web client
+        - Accessibility
+        - Documentation
+        - Build / release
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and discussions.
+          required: true
+        - label: This does not require reimplementing the official chat UI.
+          required: true

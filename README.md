@@ -1,86 +1,271 @@
-# OCDroid
+<p align="center">
+  <img src="docs/assets/hero.svg" alt="OCDroid — the official OpenCode web UI, in your pocket" width="900">
+</p>
 
-Android shell for the **official OpenCode web client**. It renders the exact web UI from your
-OpenCode server, then adds the things a browser tab cannot give you reliably:
+<h1 align="center">OCDroid</h1>
 
-- **Official login + pairing** — scans the QR code printed by `opencode pair`, then loads the
-  official OpenCode connect screen and lets it redeem the code. The official QR scanner works
-  too, with camera permission passed through the WebView.
-- **Server discovery** — finds OpenCode on the local network with mDNS or a short port-4096 scan.
-- **Pinned origin + persistent cache** — assets stay cached between launches even though tunnel
-  hostnames change.
-- **Bundled web client** — the official `index.html`, `/_assets/*`, icons and fonts are mirrored
-  into the APK at build time, so startup does not wait on the tunnel.
-- **Native notifications** — a foreground service listens to `/api/event` and posts Android
-  notifications with sound and vibration when an agent succeeds, fails, is interrupted, or asks
-  for permission. Opening a conversation dismisses its notification, and the conversation you
-  are already reading never alerts.
-- **Encrypted credentials** — HTTP Basic auth is stored with Android Keystore-backed
-  `EncryptedSharedPreferences`.
-- **Automatic fallback** — if the server's web client changes, OCDroid stops using the bundled
-  copy and loads the live client from the server.
+<p align="center">
+  <strong>The official OpenCode web UI, in your pocket.</strong><br>
+  An independent Android shell for the OpenCode web client — not a reimplementation.
+</p>
 
-There is no custom chat UI. The interface is the official OpenCode web app.
+<p align="center">
+  <a href="https://github.com/anik-amd/ocdroid/actions/workflows/build.yml"><img alt="CI" src="https://github.com/anik-amd/ocdroid/actions/workflows/build.yml/badge.svg"></a>
+  <a href="https://github.com/anik-amd/ocdroid/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/anik-amd/ocdroid?display_name=release"></a>
+  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-7c9cff.svg"></a>
+  <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84?logo=android&logoColor=white">
+</p>
 
-## Build (cloud only)
+> [!IMPORTANT]
+> **Made with OpenCode, for OpenCode.** OCDroid is a community project by OpenCode users. It is
+> **not affiliated with, endorsed by, sponsored by, or maintained by OpenCode or Anomaly.**
+> “OpenCode” is used descriptively. See [Trademarks](TRADEMARKS.md).
 
-GitHub Actions builds a signed APK on every push to `main`:
+---
 
-- Workflow: [`Build OCDroid APK`](.github/workflows/build.yml)
-- Latest release: https://github.com/anik-amd/ocdroid/releases/latest
-- Download: `OCDroid.apk` under the newest **OCDroid v…** release
+## Why OCDroid?
 
-The workflow mirrors the web client from the server, builds with JDK 17, signs with the repo's
-keystore secrets, and publishes `OCDroid.apk` to a normal versioned release (for example
-`OCDroid v0.2.1`). The version comes from `versionName` in `app/build.gradle.kts`, and the
-release body comes from `release-notes/OCDroid_<version>.md`.
+Your agent keeps working when you leave the desk. OCDroid lets you stay in the loop without
+opening a laptop:
 
-You can also open the repository in a Codespace; `.devcontainer/` installs JDK 17, Android SDK 34
-and Node, then mirrors the web assets and builds a debug APK.
+- 👀 **See whether work is running, finished, failed or waiting for permission.**
+- 🙋 **Answer permission prompts and questions** from the couch, the train or the kitchen.
+- 🔔 **Get notified when an agent needs you**, with the conversation you are already reading
+  suppressed so you are not pinged twice.
+- 🧭 **Use the full official client** — sessions, projects, files, diffs, terminal and whatever
+  else your OpenCode server exposes.
+- ⌘ **Open the command palette with your thumb**, not a hardware keyboard.
 
-## Configuration
+The point is not to replace OpenCode. The point is to make the official client usable and
+reliable on a phone.
 
-1. Install `OCDroid.apk` (allow install from unknown sources).
-2. On the computer running OpenCode, make the server reachable:
-   - Same Wi-Fi: `opencode web --mdns`, or
-     `opencode web --hostname 0.0.0.0 --port 4096`
-   - From anywhere: `opencode pair --remote`
-   - Set `OPENCODE_SERVER_PASSWORD` before starting either command.
-3. First launch searches your Wi-Fi automatically. Tap a discovered server, or tap
-   **Scan pairing QR** and scan the code printed by `opencode pair`.
-4. If nothing is found, tap **How to find my server**; the same instructions are built into the app.
-5. The official OpenCode connect screen loads. Finish signing in there; its QR scanner can use
-   the phone camera. The official web UI then loads full-screen.
-6. Native settings: long-press the app icon → **OCDroid settings**. Change the server, toggle
-   notifications/background monitoring, or clear the cache there.
+## What it is — and what it is not
 
-## Tests
+**It is** an Android WebView shell around the official OpenCode web client, with native pairing,
+notifications, background monitoring, encrypted credentials and a few small compatibility patches.
 
-Small, fast JVM tests cover URL normalization, pairing-link/QR parsing, OpenCode event parsing,
-conversation routes and notification suppression:
+**It is not** a native chat client, a fork of the OpenCode UI, or an official OpenCode product.
+There is no custom composer, no re-skinned sidebar, and no second implementation of the chat
+protocol. If the official web client changes, OCDroid follows it.
+
+## Features
+
+| | Feature |
+| --- | --- |
+| 📱 | **Exact official UI** — renders the OpenCode web client from your own server |
+| 🔗 | **Official login + pairing** — QR camera scanning, pairing links, token handoff to the official client |
+| 📡 | **Server discovery** — mDNS (`opencode web --mdns`) or a bounded scan of port `4096` on your Wi-Fi |
+| 🔔 | **Native notifications** — finished, failed, interrupted, permission and question events |
+| 🤫 | **Active-conversation suppression** — no alert for the session you are looking at |
+| ⌘ | **Command-palette button** — injected into the official titlebar using official icon-button styles |
+| 🔐 | **Encrypted credentials** — Android Keystore-backed storage; no plaintext password fallback |
+| 📦 | **Optional bundled shell** — static web assets can be mirrored into the APK for faster startup |
+| 🔄 | **Live fallback** — if the server's web client changed, OCDroid stops using the bundled copy |
+| 🛡️ | **Origin-pinned WebView** — full scheme/host/port checks, no mixed content, scoped downloads |
+| 🧪 | **JVM tests + CI** — tests run before every signed release build |
+| 🚫 | **No telemetry** — the app talks to your server, not to us |
+
+## Requirements
+
+- Android **8.0 (API 26)** or newer
+- An OpenCode server you can reach from the phone
+- A password on the server is strongly recommended
+- LAN: phone and computer on the same Wi-Fi
+- Remote: an HTTPS tunnel or your own reverse proxy — **not** plain HTTP over the internet
+
+## Quick start
+
+### 1. Download
+
+Get `OCDroid.apk` from the [latest release](https://github.com/anik-amd/ocdroid/releases/latest).
+Verify `SHA256SUMS` if you downloaded from a mirror.
 
 ```bash
-./gradlew :app:testDebugUnitTest
+sha256sum -c SHA256SUMS
 ```
 
-CI runs these tests before building the APK, so a failing rule never produces a release.
-Inside a Codespace, the same command runs in the dev container.
+You may need to allow your browser or file manager to install unknown apps.
 
-## Architecture
+### 2. Start OpenCode on your computer
 
-| Layer | Implementation |
+```bash
+export OPENCODE_SERVER_PASSWORD='choose-a-strong-password'
+opencode web --mdns
+```
+
+Or use a fixed LAN address:
+
+```bash
+opencode web --hostname 0.0.0.0 --port 4096
+```
+
+Use `OPENCODE_SERVER_PASSWORD` before starting the server. If you skip it, anyone who can reach
+the port may be able to use your agent.
+
+### 3. Connect the phone
+
+Open OCDroid and either:
+
+- tap **Find on Wi-Fi**, then tap the discovered server, or
+- tap **Scan pairing QR** and scan the code from `opencode pair`, or
+- paste the server address / pairing link manually.
+
+The official OpenCode connect screen loads. Finish signing in **there**; OCDroid does not collect
+your password with a custom form.
+
+### 4. Allow notifications
+
+Android may ask for notification permission. Say yes if you want task and permission alerts.
+You can test sound and vibration from Settings.
+
+### 5. Remote access
+
+For a server outside your LAN, use an HTTPS tunnel and pair with:
+
+```bash
+opencode pair --remote
+```
+
+Scan the QR locally. Do not expose a plain HTTP OpenCode port to the public internet.
+
+## ⌘ Command palette
+
+The official client already has a command palette bound to `Ctrl+K` / `Ctrl+Shift+P`. Phones do
+not have a Ctrl key, so OCDroid adds a small command button to the official titlebar:
+
+- Look for the **⌘ icon** in the top-right titlebar while the web UI is open.
+- Tap it to open the official palette.
+- With a hardware keyboard, use `Ctrl+K` or `Ctrl+Shift+P`.
+- The button uses the official `icon-button-v2` component and theme variables, so it follows the
+  app's light/dark theme instead of looking bolted on.
+- It hides while a dialog is open and does not open a second palette on top of one.
+
+The button is a compatibility patch, not a new UI. If a future OpenCode release changes the
+titlebar, the keyboard shortcut remains the fallback. See
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+## ⚙️ Hidden Settings
+
+Settings is deliberately not a big obvious button in the official UI. To keep the page
+pixel-identical, it lives in Android's app surface:
+
+- **Long-press the OCDroid launcher icon** → **OCDroid settings**
+- Or open the ongoing **OCDroid connected** notification → **Settings**
+
+There you can change the server, username and password, toggle task notifications and background
+monitoring, test the notification channel, disable the bundled UI, and clear cached web content.
+
+Some launchers hide app shortcuts. Keep background monitoring on to keep the notification action
+available.
+
+## 🔐 Security and privacy
+
+- Credentials are stored with **Android Keystore-backed `EncryptedSharedPreferences`**.
+- If Keystore is unavailable, the password stays **in memory** for the current process; it is not
+  written to a plaintext fallback file. Older plaintext fallback data is migrated and removed.
+- LAN discovery probes are **unauthenticated**. The password/token is never sent to every host on
+  the network.
+- The WebView compares **full origins** (scheme + host + port) for the bridge, camera, auth,
+  bundled assets and downloads.
+- Mixed content and third-party cookies are disabled.
+- External links are limited to `http`, `https`, `mailto` and `tel`; other schemes are cancelled.
+- Download credentials and cookies are attached **only** for your configured server origin.
+- The bundled-asset mirror only fetches known static paths, follows same-origin redirects and
+  rejects path traversal.
+- Notifications use private lock-screen visibility.
+- Releases include `SHA256SUMS`.
+
+**HTTP LAN tradeoff:** OCDroid supports `http://192.168.x.x:4096` because that is how many local
+OpenCode servers run. Traffic on that LAN can be observed or modified by others on the network.
+Use HTTPS for remote access and trusted Wi-Fi for HTTP. See [`SECURITY.md`](SECURITY.md).
+
+## 🧰 Troubleshooting
+
+| Problem | Try this |
 | --- | --- |
-| UI | Android `WebView` loading the official web client |
-| Static shell | Mirrored by `scripts/fetch-web-assets.mjs` into `app/src/main/assets/web` |
-| API | Same-origin requests from the web client to `/api/*` |
-| Notifications | `MonitorService` SSE connection to `/api/event` |
-| Credentials | `EncryptedSharedPreferences` + Android Keystore |
+| No server found | Same Wi-Fi? Start with `opencode web --mdns` or `--hostname 0.0.0.0`. Check the firewall. In WSL/Docker, forward the port to the host. |
+| 401 / password prompt | Set `OPENCODE_SERVER_PASSWORD` before starting the server, then enter the same password. Pairing links/tokens also work. |
+| Camera won't open in the official QR scanner | WebView usually requires a secure origin for camera. Use an HTTPS tunnel, or paste the pairing link instead. |
+| No notifications | Allow notifications, keep background monitoring on, and exempt OCDroid from battery optimization. Use **Send test notification**. |
+| Command button is missing | The official titlebar may have changed. Use `Ctrl+K` / `Ctrl+Shift+P` with a hardware keyboard, and check for an OCDroid update. |
+| Can't install over an old build | The old APK was signed with another key. Uninstalling deletes app settings — ask before doing it. |
+| Settings shortcut disappeared | Some launchers hide shortcuts. Use the **Settings** action on the ongoing monitoring notification. |
+| The UI is stale | Settings → **Clear cached web content**, or turn off **Bundled web UI** to always load live. |
 
-## Upstream
+More in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
-The web client is part of [anomalyco/opencode](https://github.com/anomalyco/opencode). OCDroid is
-an unofficial personal client, not affiliated with OpenCode or Anomaly.
+## 🏗️ Build from source
 
-Earlier commits in this repository contain a fork of
-[crim50n/oc-remote](https://github.com/crim50n/oc-remote); the current app is a clean WebView
-shell because the requirement is pixel-identical UI with the official web client.
+You do **not** need Android Studio to contribute. CI builds and tests the app.
+
+```bash
+git clone https://github.com/anik-amd/ocdroid.git
+cd ocdroid
+./gradlew :app:testDebugUnitTest
+./gradlew :app:assembleDebug
+```
+
+Requirements for a local build: JDK 17, Android SDK 34, and Node 20+ only if you want to mirror
+the web client.
+
+### Optional bundled web shell
+
+`app/src/main/assets/web/` is generated and gitignored. To mirror the official client:
+
+```bash
+OC_SERVER_URL="https://your-server.example" \
+OC_SERVER_USERNAME="opencode" \
+OC_SERVER_PASSWORD="your-password" \
+node scripts/fetch-web-assets.mjs
+```
+
+`OC_SERVER_URL` is required. The script never logs it and only crawls static shell paths. In CI
+the value comes from repository secrets.
+
+### CI and releases
+
+GitHub Actions runs JVM tests in a separate job, builds a debug APK for pull requests, and only
+then builds a signed release for `main`. Releases are normal versioned GitHub releases with
+`OCDroid.apk` and `SHA256SUMS`.
+
+- Workflow: [`.github/workflows/build.yml`](.github/workflows/build.yml)
+- Release guide: [`docs/RELEASING.md`](docs/RELEASING.md)
+- Latest release: <https://github.com/anik-amd/ocdroid/releases/latest>
+
+## 📚 Documentation
+
+| Document | What it covers |
+| --- | --- |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | dev setup, tests, PR checklist, security invariants |
+| [`SECURITY.md`](SECURITY.md) | threat model, reporting, secret handling, release verification |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | community standards |
+| [`docs/AI_AGENTS.md`](docs/AI_AGENTS.md) | safe install instructions and contribution workflow for AI agents |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | WebView, bridge, discovery, bundle, notifications, palette |
+| [`docs/RELEASING.md`](docs/RELEASING.md) | versioning, secrets, release checklist |
+| [`CHANGELOG.md`](CHANGELOG.md) | release history |
+| [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) | current limitations |
+| [`TRADEMARKS.md`](TRADEMARKS.md) | naming and non-affiliation policy |
+
+## 🤖 For AI agents
+
+If you are an AI agent installing OCDroid or contributing changes, read
+[`docs/AI_AGENTS.md`](docs/AI_AGENTS.md) first. The short version:
+
+- Ask before installing or uninstalling an APK on someone's device.
+- Download only from the official releases page and verify `SHA256SUMS`.
+- Never ask for or print passwords, pairing tokens or tunnel hostnames.
+- Do not add a native chat UI or bypass origin/mixed-content/TLS checks.
+- Do not commit generated web assets, keystores or secrets.
+- Disclose AI assistance in the pull request.
+
+## 🙏 Credits and license
+
+OCDroid is **MIT licensed**. The original OC Remote copyright is preserved, and current OCDroid
+contributors are credited in [`LICENSE`](LICENSE).
+
+It began as a fork of [crim50n/oc-remote](https://github.com/crim50n/oc-remote). The current app
+is a clean WebView shell around the web client shipped by
+[anomalyco/opencode](https://github.com/anomalyco/opencode).
+
+**Made with OpenCode, for OpenCode.** Independent project; not affiliated with OpenCode or
+Anomaly.

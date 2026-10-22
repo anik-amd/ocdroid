@@ -30,9 +30,9 @@
     <string name="monitoring_title">OCDroid connected</string>
     <string name="monitoring_text">Watching %1$s for finished tasks</string>
     <string name="task_finished_title">OpenCode task finished</string>
-    <string name="task_finished_text">Tap to open the session.</string>
+    <string name="task_finished_text">Tap to return to OCDroid.</string>
     <string name="task_failed_title">OpenCode task failed</string>
-    <string name="task_failed_text">Tap to see the error.</string>
+    <string name="task_failed_text">Tap to return to OCDroid and see the error.</string>
     <string name="task_interrupted_title">OpenCode task interrupted</string>
     <string name="task_interrupted_text">The run stopped before finishing.</string>
     <string name="permission_title">OpenCode needs attention</string>
@@ -43,7 +43,7 @@
     <string name="test_notification_title">Test notification</string>
     <string name="test_notification_text">If you can see this, Android notifications are working.</string>
     <string name="test_notification_sent">Test notification sent</string>
-    <string name="credentials_stored">Stored encrypted on this device. Never leaves it except to your server.</string>
+    <string name="credentials_stored">Stored encrypted when Android Keystore is available. Never leaves this device except to your server.</string>
     <string name="cache_cleared">Cached web content cleared</string>
     <string name="settings_saved">Saved</string>
     <string name="invalid_url">Enter a valid http:// or https:// URL</string>
@@ -78,5 +78,5 @@
     <string name="camera_permission">Camera permission is required to scan the pairing QR code.</string>
     <string name="scan_prompt">Scan the QR code from `opencode pair`</string>
     <string name="help_title">Connect to OpenCode</string>
-    <string name="help_text">On the computer running OpenCode:\n\n  1. Make it discoverable on your Wi-Fi:\n     opencode web --mdns\n\n  Or use a fixed port:\n     opencode web --hostname 0.0.0.0 --port 4096\n\n  2. Set a password before starting (recommended):\n     OPENCODE_SERVER_PASSWORD=your-password\n\n  3. Keep the phone on the same Wi-Fi and tap “Find on Wi-Fi”.\n\nFrom anywhere (OpenTunnel):\n  1. Run: opencode pair --remote\n  2. Scan the QR code, or paste the printed link.\n  Pairing links work once and expire after 5 minutes.\n\nFind the computer’s address:\n  Windows: ipconfig\n  macOS/Linux: ifconfig or ip addr\n\nNotes:\n  • The phone cannot use “localhost”: that means the phone itself.\n  • OpenCode binds to 127.0.0.1 by default, so you must start it with --hostname 0.0.0.0 or --mdns.\n  • WSL and Docker users must forward the port to the host machine.\n  • mDNS discovery needs the computer and phone on the same network.</string>
+    <string name="help_text">On the computer running OpenCode:\n\n  1. Make it discoverable on your Wi-Fi:\n     opencode web --mdns\n\n  Or use a fixed port:\n     opencode web --hostname 0.0.0.0 --port 4096\n\n  2. Set a password before starting (recommended):\n     OPENCODE_SERVER_PASSWORD=your-password\n\n  3. Keep the phone on the same Wi-Fi and tap “Find on Wi-Fi”.\n\nFrom anywhere (remote tunnel):\n  1. Run: opencode pair --remote\n  2. Scan the QR code, or paste the printed link.\n  Pairing links work once and expire after 5 minutes.\n\nFind the computer’s address:\n  Windows: ipconfig\n  macOS/Linux: ifconfig or ip addr\n\nNotes:\n  • The phone cannot use “localhost”: that means the phone itself.\n  • OpenCode binds to 127.0.0.1 by default, so you must start it with --hostname 0.0.0.0 or --mdns.\n  • WSL and Docker users must forward the port to the host machine.\n  • mDNS discovery needs the computer and phone on the same network.</string>
 </resources>

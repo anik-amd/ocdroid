@@ -15,22 +15,22 @@ class PairingTest {
     @Test
     fun parsesRemotePairingLink() {
         val payload = Pairing.parse(
-            "https://abc123.opentunnel.xyz/auth/connect/CODE_abc-123",
+            "https://abc123.example.com/auth/connect/CODE_abc-123",
         )
         assertNotNull(payload)
         assertEquals("CODE_abc-123", payload!!.code)
-        assertEquals(listOf("https://abc123.opentunnel.xyz"), payload!!.urls)
+        assertEquals(listOf("https://abc123.example.com"), payload!!.urls)
     }
 
     @Test
     fun parsesQrPayloadWithSeveralAddresses() {
         val payload = Pairing.parse(
-            """{"code":"abc_123","urls":["http://192.168.1.5:4096","https://abc123.opentunnel.xyz"]}""",
+            """{"code":"abc_123","urls":["http://192.168.1.5:4096","https://abc123.example.com"]}""",
         )
         assertNotNull(payload)
         assertEquals("abc_123", payload!!.code)
         assertEquals(
-            listOf("http://192.168.1.5:4096", "https://abc123.opentunnel.xyz"),
+            listOf("http://192.168.1.5:4096", "https://abc123.example.com"),
             payload!!.urls,
         )
     }
@@ -93,7 +93,7 @@ class PairingTest {
         assertTrue(Pairing.isLoopback("http://localhost:4096/auth/connect/abc"))
         assertTrue(Pairing.isLoopback("http://[::1]:4096"))
         assertFalse(Pairing.isLoopback("http://192.168.1.5:4096"))
-        assertFalse(Pairing.isLoopback("https://abc.opentunnel.xyz"))
+        assertFalse(Pairing.isLoopback("https://abc.example.com"))
     }
 
     @Test

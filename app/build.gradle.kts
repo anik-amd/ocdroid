@@ -14,8 +14,8 @@ android {
         applicationId = "amd.anik.ocdroid"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.2.1"
+        versionCode = 4
+        versionName = "0.3.0"
 
         // No default server: the tunnel/hostname belongs to whichever machine runs
         // OpenCode, so it must be discovered or paired on first launch.

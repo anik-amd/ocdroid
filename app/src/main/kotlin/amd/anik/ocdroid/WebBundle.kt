@@ -35,10 +35,13 @@ class WebBundle(private val context: Context, private val settings: SettingsStor
     private val liveCheckClient = OkHttpClient.Builder()
         .connectTimeout(3, TimeUnit.SECONDS)
         .readTimeout(3, TimeUnit.SECONDS)
+        .followRedirects(false)
+        .followSslRedirects(false)
         .build()
 
     fun response(uri: Uri, isMainFrame: Boolean): WebResourceResponse? {
         if (!settings.useBundledUi || indexHtml == null) return null
+        if (!ServerOrigin.same(settings.serverUrl, uri.toString())) return null
         val path = uri.path.orEmpty()
         if (path.startsWith("/api/")) return null
 
@@ -50,14 +53,18 @@ class WebBundle(private val context: Context, private val settings: SettingsStor
             else -> null
         } ?: return null
 
-        val stream = runCatching { context.assets.open("web/$candidate") }.getOrNull() ?: return null
+        val asset = AssetPaths.underWeb(candidate) ?: return null
+        val stream = runCatching { context.assets.open(asset) }.getOrNull() ?: return null
         return streamResponse(candidate, stream)
     }
 
-    private fun pathExists(relative: String): Boolean = runCatching {
-        context.assets.open("web/$relative").close()
-        true
-    }.getOrDefault(false)
+    private fun pathExists(relative: String): Boolean {
+        val asset = AssetPaths.underWeb(relative) ?: return false
+        return runCatching {
+            context.assets.open(asset).close()
+            true
+        }.getOrDefault(false)
+    }
 
     private fun streamResponse(path: String, stream: InputStream): WebResourceResponse {
         val mime = mimeType(path)
@@ -88,7 +95,9 @@ class WebBundle(private val context: Context, private val settings: SettingsStor
         runCatching {
             liveCheckClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext
-                val html = response.body?.string() ?: return@withContext
+                val contentType = response.header("Content-Type").orEmpty()
+                if (!contentType.contains("text/html", ignoreCase = true)) return@withContext
+                val html = response.peekBody(MAX_INDEX_BYTES).string()
                 val live = extractMainScript(html) ?: return@withContext
                 settings.useBundledUi = live == bundled
             }
@@ -99,6 +108,8 @@ class WebBundle(private val context: Context, private val settings: SettingsStor
         Regex("src=\"(/[^\"]*index-[^\"]+\\.js)\"").find(html)?.groupValues?.get(1)
 
     companion object {
+        private const val MAX_INDEX_BYTES = 2L * 1024L * 1024L
+
         private fun mimeType(path: String): String = when (path.substringAfterLast('.', "").lowercase()) {
             "html" -> "text/html"
             "js", "mjs" -> "application/javascript"

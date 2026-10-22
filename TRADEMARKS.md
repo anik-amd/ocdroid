@@ -1,20 +1,26 @@
-# OC Remote Trademark and Branding Policy
+# Trademarks and naming
 
-The software source code is licensed under the license specified in
-the LICENSE file.
+OCDroid is an independent, community-maintained Android shell. It is **not** affiliated with,
+endorsed by, sponsored by, or maintained by OpenCode, Anomaly, or the OpenCode maintainers.
 
-The “OC Remote” name, application logo, application icon, screenshots,
-visual identity and other project branding are not granted for use as
-the name or primary branding of derivative applications.
+## OpenCode
 
-Modified or independently distributed versions must:
+"OpenCode" and the OpenCode logo belong to their respective owners. OCDroid uses the name only
+to describe the software it connects to. The app renders the official OpenCode web client; the
+web client's own branding and assets remain the property of their owners.
 
-1. use a clearly distinct application name;
-2. use a clearly distinct application icon and logo;
-3. not imply affiliation with, endorsement by, or official status from
-   the original OC Remote project or its author;
-4. clearly identify themselves as independently maintained forks.
+Do not use OCDroid's name, icon, screenshots, or release artifacts in a way that suggests
+official OpenCode endorsement or official status.
 
-The name “OC Remote” may be used descriptively to state that a project
-is based on or derived from OC Remote, provided that such use does not
-create confusion about affiliation or endorsement.
+## OCDroid
+
+The OCDroid name, icon and project branding identify this independent project. If you distribute
+a modified version, use a clearly different app name and icon, and state that it is an
+independent fork. You may describe it as "based on OCDroid" as long as the description does not
+imply endorsement.
+
+## Upstream attribution
+
+OCDroid began as a fork of [crim50n/oc-remote](https://github.com/crim50n/oc-remote). The
+original MIT copyright notice is preserved in [`LICENSE`](LICENSE). The current app is a clean
+WebView shell around the official OpenCode web client.
