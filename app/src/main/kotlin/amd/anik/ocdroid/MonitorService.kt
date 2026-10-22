@@ -8,9 +8,12 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.AudioAttributes
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -200,6 +203,10 @@ class MonitorService : Service() {
         val kind = NotificationRules.classify(event) ?: return
         MonitorStatus.recordEvent(this, event.type)
 
+        // The user is reading this conversation, so an alert would be noise. A different
+        // conversation still notifies even when the app is in the foreground.
+        if (ActiveSessionStore.isViewing(this, sessionId)) return
+
         when (kind) {
             NotificationKind.ATTENTION -> notifyAttention(sessionId, event.title)
             NotificationKind.TASK_FINISHED ->
@@ -232,11 +239,12 @@ class MonitorService : Service() {
             else -> getString(R.string.task_finished_text)
         }
         post(
-            id = key.hashCode(),
+            id = taskNotificationId(sessionId),
             channel = CHANNEL_TASKS,
             title = title,
             text = text,
             priority = NotificationCompat.PRIORITY_HIGH,
+            vibration = TASK_VIBRATION,
         )
     }
 
@@ -251,11 +259,12 @@ class MonitorService : Service() {
             getString(R.string.permission_text)
         }
         post(
-            id = key.hashCode(),
+            id = attentionNotificationId(sessionId),
             channel = CHANNEL_PERMISSIONS,
             title = title,
             text = text,
             priority = NotificationCompat.PRIORITY_HIGH,
+            vibration = ATTENTION_VIBRATION,
         )
     }
 
@@ -266,7 +275,14 @@ class MonitorService : Service() {
         return true
     }
 
-    private fun post(id: Int, channel: String, title: String, text: String, priority: Int) {
+    private fun post(
+        id: Int,
+        channel: String,
+        title: String,
+        text: String,
+        priority: Int,
+        vibration: LongArray,
+    ) {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -283,7 +299,11 @@ class MonitorService : Service() {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(pending)
             .setAutoCancel(true)
+            // The channel owns sound and vibration on Android 8+, but setting these too keeps
+            // the notification correct on Android versions that ignore channel audio.
             .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setSound(notificationSound())
+            .setVibrate(vibration)
             .setPriority(priority)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -292,6 +312,8 @@ class MonitorService : Service() {
         manager.notify(id, notification)
         MonitorStatus.recordNotification(this, title)
     }
+
+    private fun notificationSound(): Uri = Settings.System.DEFAULT_NOTIFICATION_URI
 
     private fun buildMonitoringNotification(): Notification {
         val intent = Intent(this, MainActivity::class.java).apply {
@@ -319,12 +341,32 @@ class MonitorService : Service() {
     companion object {
         private const val TAG = "MonitorService"
         private const val FOREGROUND_ID = 41
-        const val TASKS_CHANNEL_ID = "tasks_v2"
+        const val TASKS_CHANNEL_ID = "tasks_v3"
         private const val CHANNEL_MONITORING = "monitoring_v2"
         private const val CHANNEL_TASKS = TASKS_CHANNEL_ID
-        private const val CHANNEL_PERMISSIONS = "attention_v2"
+        private const val CHANNEL_PERMISSIONS = "attention_v3"
         private const val ACTION_STOP = "amd.anik.ocdroid.STOP_MONITOR"
         private val STREAM_PATHS = listOf("/api/event", "/global/event", "/event")
+        private val TASK_VIBRATION = longArrayOf(0L, 220L, 140L, 220L)
+        private val ATTENTION_VIBRATION = longArrayOf(0L, 420L, 180L, 420L)
+
+        private fun audioAttributes(): AudioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+
+        private fun taskNotificationId(sessionId: String?): Int =
+            (sessionId ?: "global").hashCode()
+
+        private fun attentionNotificationId(sessionId: String?): Int =
+            "attention-${sessionId ?: "global"}".hashCode()
+
+        fun cancelSessionNotifications(context: Context, sessionId: String) {
+            if (sessionId.isBlank()) return
+            val manager = context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            manager.cancel(taskNotificationId(sessionId))
+            manager.cancel(attentionNotificationId(sessionId))
+        }
 
         fun start(context: Context) {
             val store = SettingsStore(context)
@@ -365,6 +407,8 @@ class MonitorService : Service() {
                 )
                 .setAutoCancel(true)
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setSound(Settings.System.DEFAULT_NOTIFICATION_URI)
+                .setVibrate(TASK_VIBRATION)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .build()
             val manager = context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -392,9 +436,12 @@ class MonitorService : Service() {
                     NotificationManager.IMPORTANCE_HIGH,
                 ).apply {
                     description = context.getString(R.string.tasks_channel_desc)
+                    setSound(Settings.System.DEFAULT_NOTIFICATION_URI, audioAttributes())
                     enableVibration(true)
+                    vibrationPattern = TASK_VIBRATION
                     enableLights(true)
                     setShowBadge(true)
+                    lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 }
             )
             manager.createNotificationChannel(
@@ -404,9 +451,12 @@ class MonitorService : Service() {
                     NotificationManager.IMPORTANCE_HIGH,
                 ).apply {
                     description = context.getString(R.string.permission_text)
+                    setSound(Settings.System.DEFAULT_NOTIFICATION_URI, audioAttributes())
                     enableVibration(true)
+                    vibrationPattern = ATTENTION_VIBRATION
                     enableLights(true)
                     setShowBadge(true)
+                    lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 }
             )
         }

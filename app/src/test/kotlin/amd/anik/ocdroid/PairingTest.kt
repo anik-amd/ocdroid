@@ -61,6 +61,33 @@ class PairingTest {
     }
 
     @Test
+    fun prefersAnAddressThePhoneCanReach() {
+        assertEquals(
+            "https://remote.example",
+            Pairing.preferredServer(
+                PairingPayload(
+                    listOf("http://127.0.0.1:4096", "https://remote.example"),
+                    "code",
+                ),
+            ),
+        )
+        assertEquals(
+            "https://remote.example",
+            Pairing.preferredServer(
+                PairingPayload(
+                    listOf("http://192.168.1.5:4096", "https://remote.example"),
+                    "code",
+                ),
+            ),
+        )
+        assertNull(
+            Pairing.preferredServer(
+                PairingPayload(listOf("http://127.0.0.1:4096", "http://localhost:4096"), "code"),
+            ),
+        )
+    }
+
+    @Test
     fun identifiesLoopbackAddresses() {
         assertTrue(Pairing.isLoopback("http://127.0.0.1:4096"))
         assertTrue(Pairing.isLoopback("http://localhost:4096/auth/connect/abc"))

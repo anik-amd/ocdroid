@@ -13,6 +13,8 @@ import android.view.Gravity
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.DownloadListener
+import android.webkit.JavascriptInterface
+import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -40,6 +42,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import okhttp3.Credentials
+import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
 
@@ -58,7 +61,8 @@ class MainActivity : AppCompatActivity() {
     private var loadedUrl: String? = null
     private var versionChecked = false
     private var discoveryJob: Job? = null
-    private var pairingInProgress = false
+    private var pendingConnectValue: String? = null
+    private var webPermissionRequest: PermissionRequest? = null
     private var fileChooserCallback: android.webkit.ValueCallback<Array<Uri>>? = null
 
     private val cameraPermission = registerForActivityResult(
@@ -71,11 +75,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val webCameraPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val request = webPermissionRequest ?: return@registerForActivityResult
+        webPermissionRequest = null
+        if (granted && !isFinishing) {
+            request.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
+        } else {
+            request.deny()
+            Toast.makeText(this, R.string.camera_permission, Toast.LENGTH_LONG).show()
+        }
+    }
+
     private val scanLauncher = registerForActivityResult(ScanContract()) { result ->
         val contents = result.contents ?: return@registerForActivityResult
         val payload = Pairing.parse(contents)
         if (payload != null) {
-            startPairing(payload)
+            beginOfficialPairing(contents, payload)
             return@registerForActivityResult
         }
         val manual = normalizeServerUrl(contents)
@@ -106,6 +123,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         webView = findViewById(R.id.webView)
+        webView.addJavascriptInterface(NativeBridge(), "OCDroidNative")
         bundle = WebBundle(this, settings)
         progress = findViewById(R.id.progress)
         setupPanel = findViewById(R.id.setupPanel)
@@ -158,6 +176,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        ActiveSessionStore.appInForeground = true
+        ActiveSessionStore.activeSessionId?.let {
+            MonitorService.cancelSessionNotifications(this, it)
+        }
         if (settings.isConfigured && settings.serverUrl != loadedUrl) {
             loadServer()
         }
@@ -170,6 +192,11 @@ class MainActivity : AppCompatActivity() {
         if (settings.notificationsEnabled && settings.backgroundMonitoring) {
             MonitorService.start(this)
         }
+    }
+
+    override fun onPause() {
+        ActiveSessionStore.appInForeground = false
+        super.onPause()
     }
 
     private fun showSetup(runDiscovery: Boolean = false) {
@@ -193,7 +220,7 @@ class MainActivity : AppCompatActivity() {
             val found = try {
                 discovery.discover { message ->
                     runOnUiThread {
-                        if (!isFinishing && !pairingInProgress) discoveryStatus.text = message
+                        if (!isFinishing) discoveryStatus.text = message
                     }
                 }
             } catch (e: CancellationException) {
@@ -201,7 +228,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 emptyList()
             }
-            if (isFinishing || pairingInProgress) return@launch
+            if (isFinishing) return@launch
 
             discoveryStatus.text = if (found.isEmpty()) {
                 getString(R.string.discovery_none)
@@ -273,72 +300,38 @@ class MainActivity : AppCompatActivity() {
             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
             setPrompt(getString(R.string.scan_prompt))
             setBeepEnabled(false)
-            setOrientationLocked(false)
+            setOrientationLocked(true)
             setBarcodeImageEnabled(false)
         }
         runCatching { scanLauncher.launch(options) }
             .onFailure { Toast.makeText(this, R.string.pairing_invalid, Toast.LENGTH_LONG).show() }
     }
 
-    private fun startPairing(payload: PairingPayload) {
-        pairingInProgress = true
-        setupPanel.isVisible = true
-        offlinePanel.isVisible = false
-        discoveryStatus.isVisible = true
-        discoveryStatus.text = getString(R.string.pairing_progress)
-        setDiscoveryBusy(true)
-        discoveryJob?.cancel()
-
-        lifecycleScope.launch {
-            val result = try {
-                Pairing.redeem(payload)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                PairingResult.Unreachable
-            }
-            pairingInProgress = false
-            setDiscoveryBusy(false)
-            when (result) {
-                is PairingResult.Paired -> {
-                    settings.save(result.url, "opencode", result.token)
-                    urlInput.setText(result.url)
-                    usernameInput.setText("opencode")
-                    passwordInput.setText(result.token)
-                    setupPanel.isVisible = false
-                    offlinePanel.isVisible = false
-                    loadServer()
-                    if (settings.notificationsEnabled && settings.backgroundMonitoring) {
-                        MonitorService.start(this@MainActivity)
-                    }
-                    Toast.makeText(
-                        this@MainActivity,
-                        getString(R.string.pairing_success, result.url),
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
-                PairingResult.Expired -> {
-                    val message = getString(R.string.pairing_expired)
-                    discoveryStatus.text = message
-                    showPairingError(message)
-                }
-                PairingResult.Unsupported -> {
-                    val message = getString(R.string.pairing_unsupported)
-                    discoveryStatus.text = message
-                    showPairingError(message)
-                }
-                PairingResult.Unreachable -> {
-                    val loopbackOnly = payload.urls.isNotEmpty() && payload.urls.all { Pairing.isLoopback(it) }
-                    val message = if (loopbackOnly) {
-                        getString(R.string.pairing_loopback)
-                    } else {
-                        getString(R.string.pairing_unreachable)
-                    }
-                    discoveryStatus.text = message
-                    showPairingError(message)
-                }
-            }
+    /**
+     * Opens the official OpenCode connect screen and lets that screen redeem the code. The
+     * previous flow redeemed the code natively, which consumed it before the web client could
+     * establish its own signed-in server entry, so the web app still showed its login screen.
+     */
+    private fun beginOfficialPairing(raw: String, payload: PairingPayload) {
+        val target = Pairing.preferredServer(payload)
+        if (target == null) {
+            val message = getString(R.string.pairing_loopback)
+            discoveryStatus.isVisible = true
+            discoveryStatus.text = message
+            showPairingError(message)
+            return
         }
+
+        pendingConnectValue = raw.trim()
+        discoveryJob?.cancel()
+        MonitorService.stop(this)
+        settings.save(target, "opencode", "")
+        urlInput.setText(target)
+        usernameInput.setText("opencode")
+        passwordInput.setText("")
+        setupPanel.isVisible = false
+        offlinePanel.isVisible = false
+        loadServer()
     }
 
     private fun showPairingError(message: String) {
@@ -348,12 +341,6 @@ class MainActivity : AppCompatActivity() {
             .setMessage(message)
             .setPositiveButton(android.R.string.ok, null)
             .show()
-    }
-
-    private fun setDiscoveryBusy(busy: Boolean) {
-        findViewById<MaterialButton>(R.id.discoverButton).isEnabled = !busy
-        findViewById<MaterialButton>(R.id.scanButton).isEnabled = !busy
-        findViewById<MaterialButton>(R.id.connectButton).isEnabled = !busy
     }
 
     private fun showHelp() {
@@ -367,7 +354,7 @@ class MainActivity : AppCompatActivity() {
     private fun saveAndConnect() {
         val raw = urlInput.text?.toString().orEmpty().trim()
         Pairing.parse(raw)?.let {
-            startPairing(it)
+            beginOfficialPairing(raw, it)
             return
         }
         if (raw.contains("/auth/connect/", ignoreCase = true) || raw.startsWith("{")) {
@@ -380,8 +367,10 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.invalid_url, Toast.LENGTH_LONG).show()
             return
         }
+        pendingConnectValue = null
         settings.save(normalized, usernameInput.text?.toString().orEmpty(), passwordInput.text?.toString().orEmpty())
         setupPanel.isVisible = false
+        offlinePanel.isVisible = false
         loadServer()
         if (settings.notificationsEnabled && settings.backgroundMonitoring) {
             MonitorService.start(this)
@@ -449,6 +438,19 @@ class MainActivity : AppCompatActivity() {
                 progress.isVisible = false
                 // Re-applied per document; the SPA keeps this listener across in-app navigation.
                 view.evaluateJavascript(WebViewPatches.ENTER_INSERTS_NEWLINE, null)
+                if (isServerUrl(url)) {
+                    val pending = pendingConnectValue
+                    pendingConnectValue = null
+                    view.evaluateJavascript(
+                        WebViewPatches.nativeBridge(JSONObject.quote(pending.orEmpty())),
+                        null,
+                    )
+                    trackSession(url)
+                }
+            }
+
+            override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+                trackSession(url)
             }
 
             override fun onReceivedError(
@@ -485,6 +487,30 @@ class MainActivity : AppCompatActivity() {
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
                 progress.isVisible = newProgress < 100
+            }
+
+            override fun onPermissionRequest(request: PermissionRequest?) {
+                request ?: return
+                val wantsCamera = request.resources.contains(PermissionRequest.RESOURCE_VIDEO_CAPTURE)
+                if (!wantsCamera || !isServerOrigin(request.origin)) {
+                    request.deny()
+                    return
+                }
+                if (ContextCompat.checkSelfPermission(
+                        this@MainActivity,
+                        Manifest.permission.CAMERA,
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    request.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
+                } else {
+                    webPermissionRequest?.deny()
+                    webPermissionRequest = request
+                    webCameraPermission.launch(Manifest.permission.CAMERA)
+                }
+            }
+
+            override fun onPermissionRequestCanceled(request: PermissionRequest?) {
+                if (webPermissionRequest === request) webPermissionRequest = null
             }
 
             override fun onShowFileChooser(
@@ -566,10 +592,99 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun isServerUrl(url: String?): Boolean {
+        if (url.isNullOrBlank()) return false
+        val serverHost = runCatching { Uri.parse(settings.serverUrl).host }.getOrNull() ?: return false
+        return runCatching { Uri.parse(url).host }.getOrNull() == serverHost
+    }
+
+    private fun isServerOrigin(origin: Uri): Boolean {
+        val serverHost = runCatching { Uri.parse(settings.serverUrl).host }.getOrNull() ?: return false
+        return origin.host == serverHost
+    }
+
+    /**
+     * The official client keeps the open conversation in its URL. Mirroring that here lets the
+     * monitor suppress a notification for the conversation the user is reading, and lets the
+     * activity dismiss an older notification when any conversation is opened.
+     */
+    private fun trackSession(url: String?) {
+        val sessionId = SessionRoutes.sessionId(url)
+        if (sessionId == null) {
+            ActiveSessionStore.activeSessionId = null
+            return
+        }
+        ActiveSessionStore.activeSessionId = sessionId
+        MonitorService.cancelSessionNotifications(this, sessionId)
+    }
+
+    private fun handleServerCredentials(url: String, token: String) {
+        // A pairing token works on every address of the same server. Keep the address the
+        // WebView is actually using instead of switching to another one the official client
+        // happened to pick, otherwise host matching for bundled assets and links breaks.
+        if (!isServerUrl(webView.url)) return
+        val normalized = webView.url?.let(::normalizeServerUrl)
+            ?: normalizeServerUrl(url)
+            ?: return
+        if (settings.serverUrl == normalized && settings.password == token) return
+
+        settings.save(normalized, "opencode", token)
+        urlInput.setText(normalized)
+        usernameInput.setText("opencode")
+        passwordInput.setText(token)
+        loadedUrl = normalized
+        if (settings.notificationsEnabled && settings.backgroundMonitoring) {
+            MonitorService.start(this)
+        }
+    }
+
+    /**
+     * Only these three operations are exposed. They cannot read arbitrary data or navigate the
+     * WebView; the page can merely report the server token and the current conversation.
+     */
+    inner class NativeBridge {
+        @JavascriptInterface
+        fun onServerConnected(url: String?, token: String?) {
+            if (url.isNullOrBlank() || token.isNullOrBlank()) return
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) handleServerCredentials(url, token)
+            }
+        }
+
+        @JavascriptInterface
+        fun onSessionOpened(sessionId: String?) {
+            val id = sessionId
+                ?.take(200)
+                ?.takeIf { SESSION_ID.matches(it) }
+                ?: return
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                ActiveSessionStore.activeSessionId = id
+                MonitorService.cancelSessionNotifications(this@MainActivity, id)
+            }
+        }
+
+        @JavascriptInterface
+        fun onSessionClosed() {
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) ActiveSessionStore.activeSessionId = null
+            }
+        }
+    }
+
     override fun onDestroy() {
+        ActiveSessionStore.appInForeground = false
+        ActiveSessionStore.activeSessionId = null
+        webPermissionRequest?.deny()
+        webPermissionRequest = null
         fileChooserCallback?.onReceiveValue(null)
         fileChooserCallback = null
+        webView.removeJavascriptInterface("OCDroidNative")
         webView.destroy()
         super.onDestroy()
+    }
+
+    private companion object {
+        val SESSION_ID = Regex("[A-Za-z0-9_-]{1,200}")
     }
 }

@@ -91,6 +91,18 @@ object Pairing {
             }
         }
 
+    /**
+     * The address to load the official web login page from. A QR code can contain the local
+     * address first (useful on the computer) and a tunnel later; the phone needs the latter.
+     * Prefer HTTPS when one is offered because the official QR scanner needs a secure origin.
+     * Returns null when every address points back at the phone itself.
+     */
+    fun preferredServer(payload: PairingPayload): String? {
+        val usable = payload.urls.filterNot { isLoopback(it) }
+        return usable.firstOrNull { it.startsWith("https://", ignoreCase = true) }
+            ?: usable.firstOrNull()
+    }
+
     /** True when this address only works on the computer that printed it. */
     fun isLoopback(url: String): Boolean {
         val host = runCatching { java.net.URI(url).host }.getOrNull()
