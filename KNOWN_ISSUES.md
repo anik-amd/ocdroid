@@ -9,7 +9,7 @@ come from that choice rather than from a missing native screen.
   into `#opencode-titlebar-right` and dispatches the official `Ctrl+K` shortcut. If a future
   OpenCode web release removes or renames that slot, the button will disappear. The hardware
   keyboard shortcut `Ctrl+K` / `Ctrl+Shift+P` still works. The button is hidden behind dialogs
-  so it cannot open a second palette on top of one.
+  so it cannot open a second palette on top of one. It is not yet verified on a physical device.
 - **HTTP is supported for local networks only in spirit, not enforced.** The app keeps
   `usesCleartextTraffic="true"` so a phone can reach a LAN server at `http://192.168.x.x:4096`.
   Use HTTPS for any server reachable outside your trusted network. See
