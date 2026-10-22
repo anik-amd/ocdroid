@@ -32,7 +32,7 @@ GitHub Actions builds a signed APK on every push to `main`:
 
 The workflow mirrors the web client from the server, builds with JDK 17, signs with the repo's
 keystore secrets, and publishes `OCDroid.apk` to a normal versioned release (for example
-`OCDroid v0.2.0`). The version comes from `versionName` in `app/build.gradle.kts`, and the
+`OCDroid v0.2.1`). The version comes from `versionName` in `app/build.gradle.kts`, and the
 release body comes from `release-notes/OCDroid_<version>.md`.
 
 You can also open the repository in a Codespace; `.devcontainer/` installs JDK 17, Android SDK 34

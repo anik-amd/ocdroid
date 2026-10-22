@@ -325,6 +325,14 @@ class MonitorService : Service() {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        val settingsPending = PendingIntent.getActivity(
+            this,
+            1,
+            Intent(this, SettingsActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         val host = runCatching { android.net.Uri.parse(settings.serverUrl).host }.getOrNull()
             ?: settings.serverUrl
         return NotificationCompat.Builder(this, CHANNEL_MONITORING)
@@ -332,6 +340,11 @@ class MonitorService : Service() {
             .setContentTitle(getString(R.string.monitoring_title))
             .setContentText(getString(R.string.monitoring_text, host))
             .setContentIntent(pending)
+            .addAction(
+                android.R.drawable.ic_menu_manage,
+                getString(R.string.settings_title),
+                settingsPending,
+            )
             .setOngoing(true)
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

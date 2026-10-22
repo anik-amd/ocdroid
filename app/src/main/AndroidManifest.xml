@@ -39,9 +39,11 @@
                 android:resource="@xml/shortcuts" />
         </activity>
 
+        <!-- Exported so the launcher's static Settings shortcut can open it. It has no intent
+             filter and only shows this app's own preferences. -->
         <activity
             android:name=".SettingsActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/settings_title"
             android:windowSoftInputMode="adjustResize" />
 
