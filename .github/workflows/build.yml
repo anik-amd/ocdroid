@@ -3,6 +3,16 @@ name: Build OCDroid APK
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'CODE_OF_CONDUCT.md'
+      - 'CONTRIBUTING.md'
+      - 'KNOWN_ISSUES.md'
+      - 'SECURITY.md'
+      - 'TRADEMARKS.md'
+      - 'docs/**'
+      - 'release-notes/**'
   pull_request:
   workflow_dispatch:
 
