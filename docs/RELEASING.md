@@ -50,6 +50,7 @@ Never print a secret in a workflow step, and never upload the keystore. The work
 - Only the release job gets `contents: write`.
 - Actions are pinned to commit SHAs.
 - Checkout uses `persist-credentials: false`.
+- Documentation-only pushes are skipped so they cannot overwrite release artifacts.
 - Pull requests run tests and a debug build, never a signed release.
 
 ## If a release fails
