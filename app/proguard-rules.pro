@@ -1,0 +1,5 @@
+-keepattributes *Annotation*
+-keep class androidx.webkit.** { *; }
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**

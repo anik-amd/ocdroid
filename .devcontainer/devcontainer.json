@@ -1,0 +1,24 @@
+{
+  "name": "OCDroid",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "fwcd.kotlin",
+        "redhat.vscode-xml"
+      ],
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic"
+      }
+    }
+  },
+  "postCreateCommand": "chmod +x ./gradlew && node scripts/fetch-web-assets.mjs && ./gradlew --version",
+  "postAttachCommand": "./gradlew :app:assembleDebug"
+}

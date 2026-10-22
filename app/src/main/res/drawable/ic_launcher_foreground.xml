@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Terminal chevron -->
+    <path
+        android:pathData="M32,38 L50,54 L32,70"
+        android:strokeColor="#F5F7FA"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- Underscore cursor -->
+    <path
+        android:pathData="M58,72 L78,72"
+        android:strokeColor="#7C9CFF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round" />
+</vector>

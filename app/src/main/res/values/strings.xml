@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OCDroid</string>
+    <string name="settings_title">OCDroid settings</string>
+    <string name="setup_title">Connect to OpenCode</string>
+    <string name="setup_subtitle">OCDroid shows the official OpenCode web client, with persistent cache and background notifications.</string>
+    <string name="server_url">Server URL</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="password_hint">OPENCODE_SERVER_PASSWORD</string>
+    <string name="connect">Connect</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="retry">Retry</string>
+    <string name="loading">Loading OpenCode…</string>
+    <string name="offline_title">Can\'t reach your server</string>
+    <string name="offline_body">Cached content stays visible. Check the URL, password, or tunnel, then retry.</string>
+    <string name="notifications">Task notifications</string>
+    <string name="notifications_desc">Notify when an agent finishes or needs permission.</string>
+    <string name="background_monitoring">Background monitoring</string>
+    <string name="background_monitoring_desc">Keeps a foreground connection so notifications arrive while the app is closed.</string>
+    <string name="server_section">Server</string>
+    <string name="data_section">Data</string>
+    <string name="clear_cache">Clear cached web content</string>
+    <string name="open_settings">Settings</string>
+    <string name="monitoring_channel">Background connection</string>
+    <string name="monitoring_channel_desc">Keeps OCDroid connected to your server.</string>
+    <string name="tasks_channel">Task notifications</string>
+    <string name="tasks_channel_desc">Agent finished or needs attention.</string>
+    <string name="monitoring_title">OCDroid connected</string>
+    <string name="monitoring_text">Watching %1$s for finished tasks</string>
+    <string name="task_finished_title">OpenCode task finished</string>
+    <string name="task_finished_text">Tap to open the session.</string>
+    <string name="task_failed_title">OpenCode task failed</string>
+    <string name="task_failed_text">Tap to see the error.</string>
+    <string name="task_interrupted_title">OpenCode task interrupted</string>
+    <string name="task_interrupted_text">The run stopped before finishing.</string>
+    <string name="permission_title">OpenCode needs permission</string>
+    <string name="permission_text">A tool is waiting for your approval.</string>
+    <string name="credentials_stored">Stored encrypted on this device. Never leaves it except to your server.</string>
+    <string name="cache_cleared">Cached web content cleared</string>
+    <string name="settings_saved">Saved</string>
+    <string name="invalid_url">Enter a valid http:// or https:// URL</string>
+    <string name="bundled_ui">Bundled web UI</string>
+    <string name="bundled_ui_desc">Load the official web client from the APK instead of the network. Falls back automatically after a server update.</string>
+</resources>
