@@ -178,8 +178,9 @@ class MonitorService : Service() {
     }
 
     private fun handleEvent(eventName: String, data: String) {
-        val type = (eventName.ifBlank { extractType(data) }).lowercase()
-        val sessionId = extractSessionId(data)
+        val event = EventParser.parse(eventName, data)
+        val type = event.type
+        val sessionId = event.sessionId
 
         if (type.contains("permission.asked") || (type.contains("permission") && !type.contains("replied"))) {
             notifyPermission(sessionId)
@@ -195,22 +196,21 @@ class MonitorService : Service() {
             type == "session.execution.failed" ||
             type == "session.execution.interrupted"
         ) {
-            if (data.contains("\"reason\":\"shutdown\"")) return
+            if (event.shutdown) return
             sessionId?.let { busySessions.remove(it) }
             val failed = type == "session.execution.failed"
             val interrupted = type == "session.execution.interrupted"
-            notifyFinished(sessionId, data, failed, interrupted)
+            notifyFinished(sessionId, event.title, failed, interrupted)
             return
         }
 
-        val status = statusRegex.find(data)?.groupValues?.get(1)?.lowercase()
-        if (status == "busy") {
+        if (event.status == "busy") {
             sessionId?.let { busySessions += it }
             return
         }
 
         // OpenCode v1 fallback.
-        val idle = type.contains("session.idle") || status == "idle"
+        val idle = type.contains("session.idle") || event.status == "idle"
         if (!idle) return
 
         val finished = when {
@@ -221,12 +221,12 @@ class MonitorService : Service() {
             }
             else -> false
         }
-        if (finished) notifyFinished(sessionId, data, failed = false, interrupted = false)
+        if (finished) notifyFinished(sessionId, event.title, failed = false, interrupted = false)
     }
 
     private fun notifyFinished(
         sessionId: String?,
-        payload: String,
+        parsedTitle: String?,
         failed: Boolean,
         interrupted: Boolean,
     ) {
@@ -235,13 +235,11 @@ class MonitorService : Service() {
         if (now - (lastNotified[key] ?: 0L) < 15_000L) return
         lastNotified[key] = now
 
-        val title = titleRegex.find(payload)?.groupValues?.get(1)
-            ?.takeIf { it.isNotBlank() && it.length <= 80 }
-            ?: when {
-                failed -> getString(R.string.task_failed_title)
-                interrupted -> getString(R.string.task_interrupted_title)
-                else -> getString(R.string.task_finished_title)
-            }
+        val title = parsedTitle ?: when {
+            failed -> getString(R.string.task_failed_title)
+            interrupted -> getString(R.string.task_interrupted_title)
+            else -> getString(R.string.task_finished_title)
+        }
         val text = when {
             failed -> getString(R.string.task_failed_text)
             interrupted -> getString(R.string.task_interrupted_text)
@@ -357,18 +355,6 @@ class MonitorService : Service() {
         private const val CHANNEL_PERMISSIONS = "permissions"
         private const val ACTION_STOP = "amd.anik.ocdroid.STOP_MONITOR"
         private val STREAM_PATHS = listOf("/api/event", "/event")
-        private val statusRegex =
-            Regex("\"status\"\\s*:\\s*\\{\\s*\"type\"\\s*:\\s*\"(busy|idle|retry)\"")
-        private val sessionIdRegex =
-            Regex("\"(?:sessionID|sessionId|session_id)\"\\s*:\\s*\"([^\"]+)\"")
-        private val typeRegex = Regex("\"type\"\\s*:\\s*\"([^\"]+)\"")
-        private val titleRegex = Regex("\"title\"\\s*:\\s*\"([^\"]+)\"")
-
-        private fun extractSessionId(data: String): String? =
-            sessionIdRegex.find(data)?.groupValues?.get(1)
-
-        private fun extractType(data: String): String =
-            typeRegex.find(data)?.groupValues?.get(1).orEmpty()
 
         fun start(context: Context) {
             val store = SettingsStore(context)

@@ -17,11 +17,9 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
-        buildConfigField(
-            "String",
-            "DEFAULT_SERVER_URL",
-            "\"https://10e54ea9992ef31e.zgpcurbw6kr6.opentunnel.xyz\""
-        )
+        // No default server: the tunnel/hostname belongs to whichever machine runs
+        // OpenCode, so it must be discovered or paired on first launch.
+        buildConfigField("String", "DEFAULT_SERVER_URL", "\"\"")
         buildConfigField("String", "DEFAULT_SERVER_USERNAME", "\"opencode\"")
     }
 
@@ -72,6 +70,10 @@ android {
         buildConfig = true
     }
 
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -91,4 +93,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }

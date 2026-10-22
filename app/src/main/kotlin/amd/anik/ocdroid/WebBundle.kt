@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
  * Serves the mirrored official web client from the APK.
  *
  * Only files that actually exist in assets/web are intercepted. Everything else
- * (notably /api/* and SSE streams) continues to the real server untouched.
+ * (notably /api/ endpoints and SSE streams) continues to the real server untouched.
  */
 class WebBundle(private val context: Context, private val settings: SettingsStore) {
 

@@ -1,6 +1,5 @@
 package amd.anik.ocdroid
 
-import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -59,13 +58,15 @@ object Pairing {
     }
 
     private fun parseLink(text: String): PairingPayload? {
-        val uri = runCatching { Uri.parse(text) }.getOrNull() ?: return null
-        if (uri.scheme != "http" && uri.scheme != "https") return null
-        val segments = uri.pathSegments
+        val uri = runCatching { java.net.URI(text) }.getOrNull() ?: return null
+        val scheme = uri.scheme?.lowercase()
+        if (scheme != "http" && scheme != "https") return null
+        val segments = uri.path.orEmpty().split('/').filter { it.isNotEmpty() }
         if (segments.size != 3 || segments[0] != "auth" || segments[1] != "connect") return null
         val code = segments[2]
         if (!codePattern.matches(code)) return null
-        val origin = normalizeServerUrl("${uri.scheme}://${uri.authority}") ?: return null
+        val authority = uri.rawAuthority ?: return null
+        val origin = normalizeServerUrl("$scheme://$authority") ?: return null
         return PairingPayload(listOf(origin), code)
     }
 

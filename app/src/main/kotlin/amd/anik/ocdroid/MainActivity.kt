@@ -227,7 +227,7 @@ class MainActivity : AppCompatActivity() {
             com.google.android.material.R.attr.materialButtonOutlinedStyle,
         ).apply {
             text = label
-            textAllCaps = false
+            isAllCaps = false
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             setOnClickListener { chooseServer(server) }
         }

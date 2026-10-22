@@ -86,20 +86,38 @@ class SettingsStore(context: Context) {
     }
 }
 
-/** Adds https:// when the user omits a scheme and drops trailing slashes. */
+private val SCHEME = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://")
+private val PRIVATE_HOST = Regex(
+    "^(localhost|127\\.|10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|.*\\.local)(:\\d+)?$",
+    RegexOption.IGNORE_CASE,
+)
+
+/**
+ * Turns user input into a canonical origin (scheme, host and port only).
+ *
+ * Local addresses default to http:// because OpenCode's own web server is plain HTTP;
+ * public hostnames default to https://. Paths are intentionally dropped: the WebView
+ * always starts at the server root, while pairing links are parsed separately.
+ */
 fun normalizeServerUrl(input: String): String? {
     val trimmed = input.trim()
     if (trimmed.isEmpty()) return null
-    val withScheme = when {
-        trimmed.startsWith("http://", ignoreCase = true) -> trimmed
-        trimmed.startsWith("https://", ignoreCase = true) -> trimmed
-        else -> "https://$trimmed"
+
+    val candidate = if (SCHEME.containsMatchIn(trimmed)) {
+        trimmed
+    } else {
+        val hostPart = trimmed.substringBefore('/')
+        val scheme = if (PRIVATE_HOST.matches(hostPart) || !hostPart.contains('.')) "http" else "https"
+        "$scheme://$trimmed"
     }
+
     return runCatching {
-        val uri = android.net.Uri.parse(withScheme)
-        if (uri.host.isNullOrBlank()) return null
-        if (uri.scheme != "http" && uri.scheme != "https") return null
+        val uri = java.net.URI(candidate)
+        val scheme = uri.scheme?.lowercase()
+        if (scheme != "http" && scheme != "https") return null
+        if (uri.userInfo != null) return null
+        val host = uri.host?.takeIf { it.isNotBlank() } ?: return null
         val port = if (uri.port != -1) ":${uri.port}" else ""
-        "${uri.scheme}://${uri.host}$port"
+        "$scheme://$host$port"
     }.getOrNull()
 }
