@@ -62,15 +62,11 @@ class WebBundle(private val context: Context, private val settings: SettingsStor
     private fun streamResponse(path: String, stream: InputStream): WebResourceResponse {
         val mime = mimeType(path)
         val encoding = if (mime.startsWith("text/") || mime.contains("json") || mime.contains("javascript") || mime.contains("xml")) "utf-8" else null
-        return WebResourceResponse(mime, encoding, stream).apply {
-            val headers = mutableMapOf(
-                "Cache-Control" to if (path == "index.html") "no-cache" else "public, max-age=31536000, immutable",
-                "X-Content-Type-Options" to "nosniff",
-            )
-            responseHeaders = headers
-            statusCode = 200
-            reasonPhrase = "OK"
-        }
+        val headers = mutableMapOf(
+            "Cache-Control" to if (path == "index.html") "no-cache" else "public, max-age=31536000, immutable",
+            "X-Content-Type-Options" to "nosniff",
+        )
+        return WebResourceResponse(mime, encoding, 200, "OK", headers, stream)
     }
 
     /**

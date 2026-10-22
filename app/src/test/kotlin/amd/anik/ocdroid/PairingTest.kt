@@ -14,7 +14,7 @@ class PairingTest {
         )
         assertNotNull(payload)
         assertEquals("CODE_abc-123", payload!!.code)
-        assertEquals(listOf("https://abc123.opentunnel.xyz"), payload.urls)
+        assertEquals(listOf("https://abc123.opentunnel.xyz"), payload!!.urls)
     }
 
     @Test
@@ -26,7 +26,7 @@ class PairingTest {
         assertEquals("abc_123", payload!!.code)
         assertEquals(
             listOf("http://192.168.1.5:4096", "https://abc123.opentunnel.xyz"),
-            payload.urls,
+            payload!!.urls,
         )
     }
 
