@@ -9,7 +9,7 @@ package amd.anik.ocdroid
  */
 object WebViewPatches {
 
-    const val ENTER_INSERTS_NEWLINE = """
+    val ENTER_INSERTS_NEWLINE = """
         (function () {
           if (window.__ocdroidEnterNewline) return;
           window.__ocdroidEnterNewline = true;
