@@ -50,6 +50,9 @@ paste the pairing link.
 
 ## Notes
 
+- This 0.3.0 artifact was built without the optional bundled web-client mirror because the
+  `OC_SERVER_URL` repository secret is not configured. The WebView loads the official web client
+  live from your server. Future releases can bundle the static shell once that secret is set.
 - The HTTP LAN mode remains available. Use HTTPS for any server reachable outside your trusted
   network.
 - Camera, notification sound/vibration and WebView rendering still need a real-device smoke test.
