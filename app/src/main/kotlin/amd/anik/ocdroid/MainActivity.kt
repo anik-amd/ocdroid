@@ -253,26 +253,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Opens the official OpenCode connect screen and lets that screen redeem the code. The
-     * previous flow redeemed the code natively, which consumed it before the web client could
-     * establish its own signed-in server entry, so the web app still showed its login screen.
+     * Redeems the pairing code natively (GET /auth/connect/<code> returns a session token)
+     * and hands that token to the official web client through `?auth_token=`, which it
+     * consumes at boot and strips from the URL itself. Redeeming in the WebView instead was
+     * tried first: replacing the document reliably ended on a black screen, and using Basic
+     * auth for the page loads broke the SPA boot.
      */
     private fun beginOfficialPairing(payload: PairingPayload) {
-        val target = Pairing.preferredServer(payload)
-        if (target == null) {
+        if (Pairing.preferredServer(payload) == null) {
             showPairingError(getString(R.string.pairing_loopback))
             return
         }
-
-        // Do not inject the pairing code into the official login form. Let the web client's own
-        // login page handle it; this avoids replacing the document and ending on a black screen.
         MonitorService.stop(this)
-        settings.save(target, "opencode", "")
-        urlInput.setText(target)
-        passwordInput.setText("")
-        welcomePanel.isVisible = false
-        webView.isVisible = true
-        loadServer()
+        lifecycleScope.launch {
+            if (isFinishing || isDestroyed) return@launch
+            when (val result = Pairing.redeem(payload)) {
+                is PairingResult.Paired -> finishSignIn(result.url, result.token)
+                PairingResult.Expired -> showPairingError(getString(R.string.pairing_expired))
+                PairingResult.Unsupported ->
+                    showPairingError(getString(R.string.pairing_unreachable))
+                else -> showPairingError(getString(R.string.pairing_unreachable))
+            }
+        }
     }
 
     private fun showPairingError(message: String) {
@@ -610,6 +612,8 @@ class MainActivity : AppCompatActivity() {
         urlInput.setText(normalized)
         passwordInput.setText(token)
         loadedUrl = normalized
+        welcomePanel.isVisible = false
+        webView.isVisible = true
         if (settings.notificationsEnabled && settings.backgroundMonitoring) {
             MonitorService.start(this)
         }

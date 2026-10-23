@@ -2,6 +2,15 @@
 
 All notable changes to OCDroid. Older release notes are in [`release-notes/`](release-notes/).
 
+## [0.3.6] - 2026-10-23
+
+### Fixed
+
+- Scanning a pairing QR now signs the app in: the code is redeemed natively
+  (`GET /auth/connect/<code>` → session token) and handed to the official web client via
+  `?auth_token=`. Previously the scan only saved the server address and dropped the code, so
+  the official login page still demanded a link after a successful scan
+
 ## [0.3.5] - 2026-10-23
 
 ### Added

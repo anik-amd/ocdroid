@@ -56,10 +56,12 @@ the platform features a browser tab cannot provide reliably.
 5. The monitor connects to `/api/event` (v2), `/global/event` or `/event` (v1) and translates
    events into notifications.
 
-Pairing redemption stays with the official login screen. The welcome screen's native scanner
-only reads the QR to obtain the `opencode pair` link; the code itself is still redeemed by the
-official client after the server page loads, so the web client can create its own signed-in
-server entry.
+The official client redeems pairing codes itself in its browser. For the phone, the native side
+calls `GET /auth/connect/<code>` (`Pairing.redeem`) to obtain the session token, stores it as
+the Basic-auth password for the monitor, then opens the server root with `?auth_token=` so the
+official web client adopts the signed-in server entry itself (it consumes and strips the query
+parameter at boot). The code is only fetched once, server-side redeeming still works for
+browsers that open the printed link.
 
 ## Origin policy
 

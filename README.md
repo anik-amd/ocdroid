@@ -102,8 +102,8 @@ the port may be able to use your agent.
 Open OCDroid. A **welcome screen** explains the whole setup — no server configured yet. Then:
 
 1. On the computer running OpenCode, run `opencode pair` in a terminal.
-2. In the app, tap **Scan pairing QR** and scan the code — the official client redeems the
-   pairing and OCDroid saves the server automatically.
+2. In the app, tap **Scan pairing QR** and scan the code — OCDroid redeems the pairing, hands
+   the session token to the official web client, and you land in your OpenCode UI.
 
 No terminal at hand? Tap **Copy instruction for my agent** on the welcome screen and paste the
 message into a new OpenCode session on the computer: the AI agent starts the web server for you
