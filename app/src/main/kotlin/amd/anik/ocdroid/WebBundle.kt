@@ -53,13 +53,25 @@ class WebBundle(private val context: Context, private val settings: SettingsStor
             else -> null
         } ?: return null
 
-        val asset = AssetPaths.underWeb(candidate) ?: return null
+        val asset = AssetPaths.underWeb(packagerSafe(candidate)) ?: return null
         val stream = runCatching { context.assets.open(asset) }.getOrNull() ?: return null
         return streamResponse(candidate, stream)
     }
 
+    /**
+     * The Android asset packager skips directories starting with "_", so the mirror
+     * stores the official client's `/_assets/` chunk files under `webassets/`. Requests
+     * keep the original `/assets/...`-style server paths and are mapped here.
+     */
+    private fun packagerSafe(relative: String): String =
+        if (relative.startsWith("_assets/")) {
+            "webassets/" + relative.removePrefix("_assets/")
+        } else {
+            relative
+        }
+
     private fun pathExists(relative: String): Boolean {
-        val asset = AssetPaths.underWeb(relative) ?: return false
+        val asset = AssetPaths.underWeb(packagerSafe(relative)) ?: return false
         return runCatching {
             context.assets.open(asset).close()
             true

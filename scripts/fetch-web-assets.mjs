@@ -94,6 +94,12 @@ function localPath(url) {
   if (!clean || clean.includes("\0") || clean.includes("\\")) {
     throw new Error(`unsafe path: ${url.pathname}`);
   }
+
+  // The Android asset packager silently drops directories whose name starts with an
+  // underscore, so the official client's /_assets/ chunk files are stored in a
+  // differently named local directory. WebBundle maps the two back at request time.
+  clean = clean.replace(/^_assets\//, "webassets/");
+
   const resolved = path.resolve(OUT, clean);
   if (resolved !== OUT && !resolved.startsWith(OUT + path.sep)) {
     throw new Error(`unsafe path: ${url.pathname}`);

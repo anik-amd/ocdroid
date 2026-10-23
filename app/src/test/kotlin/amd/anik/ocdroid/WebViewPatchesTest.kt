@@ -27,6 +27,13 @@ class WebViewPatchesTest {
 
     @Test
     fun commandPaletteDoesNotStackOnTopOfAnOpenDialog() {
-        assertTrue(WebViewPatches.COMMAND_PALETTE.contains("[role=\"dialog\"]"))
+        val script = WebViewPatches.COMMAND_PALETTE
+        assertTrue(script.contains("[role=\"dialog\"]"))
+        // The mobile layout keeps its closed bottom drawer in the DOM with role="dialog";
+        // the patch must ignore elements that are not actually rendered and expanded,
+        // otherwise the button is hidden forever on phones.
+        assertTrue(script.contains("data-closed"))
+        assertTrue(script.contains("getBoundingClientRect"))
+        assertTrue(script.contains("getComputedStyle"))
     }
 }

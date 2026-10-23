@@ -41,7 +41,21 @@ object WebViewPatches {
           window.__ocdroidCommandPalette = true;
 
           function dialogOpen() {
-            return !!document.querySelector('[role="dialog"], [data-component="dialog"]');
+            // The mobile layout keeps its closed bottom drawer in the DOM with
+            // role="dialog". Treating every element with that role as an open dialog
+            // hid the button forever on phones, so only count dialogs that are
+            // actually expanded and rendered.
+            var nodes = document.querySelectorAll('[role="dialog"], [data-component="dialog"]');
+            for (var i = 0; i < nodes.length; i++) {
+              var node = nodes[i];
+              if (node.hasAttribute('data-closed') || node.closest('[data-closed]')) continue;
+              var rect = node.getBoundingClientRect();
+              if (rect.width <= 1 || rect.height <= 1) continue;
+              var style = window.getComputedStyle(node);
+              if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue;
+              return true;
+            }
+            return false;
           }
 
           function press(key, code, ctrlKey, shiftKey) {
