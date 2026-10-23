@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.view.Gravity
 import android.view.View
 import android.webkit.CookieManager
@@ -323,16 +324,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        pendingConnectValue = JSONObject()
-            .put("code", payload.code)
-            .put(
-                "urls",
-                JSONArray(
-                    (listOf(target) + payload.urls.filter { it != target })
-                        .distinct(),
-                ),
-            )
-            .toString()
+        // Do not inject the pairing code into the official login form. Let the web client's own
+        // login page handle it; this avoids replacing the document and ending on a black screen.
         discoveryJob?.cancel()
         MonitorService.stop(this)
         settings.save(target, "opencode", "")
@@ -454,10 +447,10 @@ class MainActivity : AppCompatActivity() {
                 view.evaluateJavascript(WebViewPatches.ENTER_INSERTS_NEWLINE, null)
                 if (isServerUrl(url)) {
                     view.evaluateJavascript(WebViewPatches.COMMAND_PALETTE, null)
-                    val pending = pendingConnectValue
-                    pendingConnectValue = null
+                    // Let the official web client own its login flow. Injecting a pairing code here
+                    // could reload/replace the page and leave the WebView black, so never do it.
                     view.evaluateJavascript(
-                        WebViewPatches.nativeBridge(JSONObject.quote(pending.orEmpty())),
+                        WebViewPatches.nativeBridge(JSONObject.quote("")),
                         null,
                     )
                     trackSession(url)
@@ -507,7 +500,13 @@ class MainActivity : AppCompatActivity() {
             override fun onPermissionRequest(request: PermissionRequest?) {
                 request ?: return
                 val wantsCamera = request.resources.contains(PermissionRequest.RESOURCE_VIDEO_CAPTURE)
-                if (!wantsCamera || !isServerOrigin(request.origin)) {
+                if (!wantsCamera) {
+                    request.deny()
+                    return
+                }
+                // The bundled web client is served from file:// when no server is configured.
+                // Allow its login page to request the camera for QR scanning too.
+                if (!isServerOrigin(request.origin) && request.origin.scheme != "file") {
                     request.deny()
                     return
                 }
@@ -535,8 +534,12 @@ class MainActivity : AppCompatActivity() {
             ): Boolean {
                 fileChooserCallback?.onReceiveValue(null)
                 fileChooserCallback = filePathCallback
-                val intent = fileChooserParams.createIntent().apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
+                val intent = if (fileChooserParams.isCaptureEnabled) {
+                    Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                } else {
+                    fileChooserParams.createIntent().apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                    }
                 }
                 return try {
                     fileChooser.launch(intent)
@@ -651,11 +654,12 @@ class MainActivity : AppCompatActivity() {
             ?: return
         if (settings.serverUrl == normalized && settings.password == token) return
 
+        // Keep the web client on its own page after login. Reloading it with Basic auth here is
+        // what produced the black screen, and the web client already has the session token.
         settings.save(normalized, "opencode", token)
         urlInput.setText(normalized)
         usernameInput.setText("opencode")
         passwordInput.setText(token)
-        loadedUrl = normalized
         if (settings.notificationsEnabled && settings.backgroundMonitoring) {
             MonitorService.start(this)
         }
