@@ -2,6 +2,26 @@
 
 All notable changes to OCDroid. Older release notes are in [`release-notes/`](release-notes/).
 
+## [0.3.8] - 2026-10-23
+
+### Added
+
+- The welcome screen now asks where the phone is and explains the two connection modes side by
+  side: **at home** — `opencode pair` over the same Wi-Fi, and **away** — `opencode pair --remote`
+  through OpenCode's built-in tunnel (`--yes` for scripts, first run takes a couple of minutes),
+  including the single-use/five-minute QR rules and the session-scoped nature of the remote
+  exposure
+- The scanned remote QR carries both the LAN and tunnel addresses, and both cards say so — the
+  phone connects with whichever is reachable, so one pairing covers both locations
+
+### Changed
+
+- The copy-paste agent instruction now asks the agent to find out where the phone is first, then
+  run the matching pairing command
+- The help dialog matches the current pairing flows and no longer references the removed
+  "Find on Wi-Fi" discovery button
+- README, docs/AI_AGENTS.md and docs/ARCHITECTURE.md updated to the same two-path guidance
+
 ## [0.3.7] - 2026-10-23
 
 ### Fixed
