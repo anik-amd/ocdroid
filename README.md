@@ -1,8 +1,5 @@
-<h1 align="center">OCDroid</h1>
-
 <p align="center">
-  <strong>The official OpenCode web UI, in your pocket.</strong><br>
-  An independent Android shell for the OpenCode web client — not a reimplementation.
+  <img src="docs/banner.png" alt="OCDroid — the official OpenCode web client, natively on Android">
 </p>
 
 <p align="center">
@@ -43,6 +40,46 @@ background monitoring, encrypted credentials and a few small compatibility patch
 **It is not** a native chat client, a fork of the OpenCode UI, or an official OpenCode product.
 There is no custom composer, no re-skinned sidebar, and no second implementation of the chat
 protocol. If the official web client changes, OCDroid follows it.
+
+## Screenshots
+
+The UI is the official OpenCode web client straight from your own server, in both themes —
+these shots follow your GitHub color scheme automatically.
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <strong>Session chat</strong><br><br>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark-chat.jpg">
+        <img src="docs/screenshots/light-chat.jpg" width="260" alt="Session chat">
+      </picture>
+    </td>
+    <td align="center" width="50%">
+      <strong>Session tabs</strong><br><br>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark-tabs.jpg">
+        <img src="docs/screenshots/light-tabs.jpg" width="260" alt="Session tabs">
+      </picture>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <strong>Files</strong><br><br>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark-files.jpg">
+        <img src="docs/screenshots/light-files.jpg" width="260" alt="File browser">
+      </picture>
+    </td>
+    <td align="center" width="50%">
+      <strong>Command palette</strong><br><br>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark-cmd.jpg">
+        <img src="docs/screenshots/light-cmd.jpg" width="260" alt="Command palette opened from the titlebar button">
+      </picture>
+    </td>
+  </tr>
+</table>
 
 ## Features
 
