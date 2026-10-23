@@ -10,6 +10,8 @@ OCDroid publishes normal, versioned GitHub releases. Each release contains `OCDr
 - Use a patch bump for fixes (`0.3.1`).
 - Bump `versionCode` by one and `versionName` to the release version in
   `app/build.gradle.kts`.
+- After a release is published, bump the version before merging further changes. A push with the
+  same `versionName` overwrites that release's assets.
 
 ## Checklist
 
