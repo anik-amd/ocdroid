@@ -2,6 +2,19 @@
 
 All notable changes to OCDroid. Older release notes are in [`release-notes/`](release-notes/).
 
+## [0.3.7] - 2026-10-23
+
+### Fixed
+
+- Command palette button now appears on phones: the mobile web layout keeps its closed bottom
+  drawer in the DOM with `role="dialog"`, which the patch treated as an open dialog and hid the
+  button forever. Detection now ignores dialogs that are not actually rendered (verified
+  against the official client at phone width)
+- The offline mirror now really ships: the Android asset packager drops directories starting
+  with an underscore, so the mirror's `/_assets/` chunk files were silently missing from every
+  APK since 0.3.4 and the UI always fell back to the live server. Chunks are stored under
+  `webassets/` now and mapped back at request time; a packaged APK contains all 283 JS chunks
+
 ## [0.3.6] - 2026-10-23
 
 ### Fixed
