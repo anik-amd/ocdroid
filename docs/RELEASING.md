@@ -101,19 +101,45 @@ lives in the OpenTunnel profile on the machine that created it. Do this on that 
    opencode service set remote false
    ```
 
+   Changing a service setting stops the background server, so expect a brief interruption. Do
+   this from a separate terminal, not from inside the OpenCode session you are trying to keep.
+
 3. Delete the old tunnel. This is destructive: it removes the hostname for good and invalidates
    every route that shares the default tunnel.
+
+   On Linux or macOS:
 
    ```bash
    opentunnel status
    opentunnel delete --yes
    ```
 
-   If the CLI is missing, install it with `npm install -g opentunnel`, or use the Homebrew/curl
-   options from <https://opentunnel.xyz/>. For a non-default profile:
+   If the CLI is missing there, install it with `npm install -g opentunnel`, or use the
+   Homebrew/curl options from <https://opentunnel.xyz/>. For a non-default profile:
 
    ```bash
    opentunnel --profile <profile> delete --yes
+   ```
+
+   On Windows the published CLI package has no Windows binary. Use the OpenTunnel API with the
+   token from the local profile, then remove the profile so OpenCode creates a fresh tunnel:
+
+   ```powershell
+   $dir = Join-Path $env:USERPROFILE '.local\share\opentunnel\default'
+   if (Test-Path $dir) {
+     $token = (Get-Content (Join-Path $dir 'token') -Raw).Trim()
+     $tunnel = Get-Content (Join-Path $dir 'tunnel.json') -Raw | ConvertFrom-Json
+     try {
+       Invoke-RestMethod -Method Delete `
+         -Uri "https://opentunnel.xyz/api/tunnel/$($tunnel.id)" `
+         -Headers @{ Authorization = "Bearer $token" }
+       Write-Host 'Tunnel deleted.'
+     } catch {
+       Write-Host "Tunnel delete failed (continuing): $($_.Exception.Message)"
+     }
+     Remove-Item $dir -Recurse -Force
+     Write-Host 'Profile removed.'
+   }
    ```
 
    If `opentunnel status` says there is no profile, the old identity is not on this machine.
