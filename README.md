@@ -99,15 +99,23 @@ the port may be able to use your agent.
 
 ### 3. Connect the phone
 
-Open OCDroid — it immediately shows the official OpenCode *"Connect to a server"* page. Then
-either:
+Open OCDroid. A **welcome screen** explains the whole setup — no server configured yet. Then:
 
-- tap **Scan QR code** and scan the code printed by `opencode pair`, or
-- paste the pairing link into the login page, or
-- enter your server address and password directly in the official form.
+1. On the computer running OpenCode, run `opencode pair` in a terminal.
+2. In the app, tap **Scan pairing QR** and scan the code — the official client redeems the
+   pairing and OCDroid saves the server automatically.
 
-Manual server configuration also remains available in the hidden Settings (long-press the
-launcher icon).
+No terminal at hand? Tap **Copy instruction for my agent** on the welcome screen and paste the
+message into a new OpenCode session on the computer: the AI agent starts the web server for you
+and shows a QR code when it is done — you just scan.
+
+Alternatives on the same welcome screen:
+
+- paste the pairing link (or a server address) and tap **Connect**, or
+- change the server, username and password in hidden Settings (long-press the launcher icon).
+
+Whether the server runs locally (`http://192.168.x.x:4096`) or through a tunnel, the official
+web UI itself handles every login step after that — including its own camera QR scanner.
 
 ### 4. Allow notifications
 
@@ -178,7 +186,7 @@ Use HTTPS for remote access and trusted Wi-Fi for HTTP. See [`SECURITY.md`](SECU
 
 | Problem | Try this |
 | --- | --- |
-| Nothing loads at all | The server may be down the tunnel went away. Start OpenCode again and re-pair if the address changed. Manual entry is in hidden Settings (long-press the icon). |
+| Nothing loads at all | The server may be down or the tunnel went away. OCDroid shows the welcome screen with the dead address — unplug/replug, restart OpenCode, then **Retry**, or just re-pair (one scan). Manual entry is on the same screen. |
 | 401 / password prompt | Set `OPENCODE_SERVER_PASSWORD` before starting the server, then enter the same password. Pairing links/tokens also work. |
 | Camera won't open in the official QR scanner | WebView usually requires a secure origin for camera. Use an HTTPS tunnel, or paste the pairing link instead. |
 | No notifications | Allow notifications, keep background monitoring on, and exempt OCDroid from battery optimization. Use **Send test notification**. |

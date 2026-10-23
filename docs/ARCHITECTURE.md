@@ -39,21 +39,27 @@ the platform features a browser tab cannot provide reliably.
 ## Startup and connection
 
 1. `MainActivity` reads `SettingsStore`.
-2. If configured, it loads the server root in the WebView. Otherwise it loads the **bundled
-   login page** (`file:///android_asset/web/index.html`), which is the official web client's own
-   "Connect to a server" screen — no custom first-run form.
+2. If configured, it loads the server root in the WebView and begins pairing. Otherwise it shows
+   a **native welcome screen** — plain onboarding with setup steps (`opencode pair`), a
+   copy-paste instruction the user can hand to their OpenCode AI agent, and connect controls
+   (native ZXing QR scanner, pairing-link/address + password form, Settings, help). No server
+   WebView is loaded while the welcome screen is visible, so a broken mirror or dead tunnel can
+   never render as a blank screen.
 3. The official web client handles login (paste a pairing link, scan its QR with the camera, or
    enter address/password) and stores its own server entry in `localStorage`.
 4. `WebViewPatches.nativeBridge` reads that entry and reports the URL/token to
-   `OCDroidNative.onServerConnected`. On the bundled login page the reported server must answer
-   a reachability probe first; OCDroid then stores the token as the Basic-auth password and
+   `OCDroidNative.onServerConnected`. On non-server pages the reported server must answer a
+   reachability probe first; OCDroid then stores the token as the Basic-auth password and
    opens the real server origin with `?auth_token=`, which the official client consumes itself.
+5. If a main-frame load of the saved server fails (server off, tunnel rotated), the welcome
+   screen returns with the unreachable address, a **Retry** button and all pairing controls.
 5. The monitor connects to `/api/event` (v2), `/global/event` or `/event` (v1) and translates
    events into notifications.
 
-Pairing is entirely delegated to the official login screen. The native side never redeems a
-pairing code itself: doing that consumed the code before the web client could create its own
-signed-in server entry.
+Pairing redemption stays with the official login screen. The welcome screen's native scanner
+only reads the QR to obtain the `opencode pair` link; the code itself is still redeemed by the
+official client after the server page loads, so the web client can create its own signed-in
+server entry.
 
 ## Origin policy
 

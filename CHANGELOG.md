@@ -2,6 +2,21 @@
 
 All notable changes to OCDroid. Older release notes are in [`release-notes/`](release-notes/).
 
+## [0.3.5] - 2026-10-23
+
+### Added
+
+- First-run welcome screen with setup instructions: how to run `opencode pair` on the computer,
+  a copy-paste instruction the user can hand to their OpenCode AI agent (so the agent starts the
+  web server and prints a pairing QR), a native pairing QR scanner, a paste-a-link / manual
+  address + password form, and links to settings and the full help dialog
+
+### Changed
+
+- The welcome screen also replaces the plain error page whenever a saved server cannot be
+  reached (e.g. a rotated tunnel): the dead address is shown with Retry, scanning and manual
+  entry available instead of a blank screen
+
 ## [0.3.4] - 2026-10-23
 
 ### Fixed

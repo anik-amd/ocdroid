@@ -22,6 +22,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,13 +32,20 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.launch
 import okhttp3.Credentials
 
 /**
- * One screen, one WebView. There is no custom login page: when no server is configured the
- * app opens the official web client's own "Connect to a server" page (bundled in the APK),
- * and every setting except the server token lives in the hidden SettingsActivity.
+ * One screen, one WebView, plus a first-run welcome screen.
+ *
+ * The welcome screen is a plain onboarding page with instructions: the login itself always
+ * happens inside the official OpenCode web client (scanning a pairing QR on the computer or
+ * pasting its `opencode pair` link). It is also used instead of a bare error page whenever a
+ * saved server cannot be reached, so the app never shows an empty screen.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -45,12 +53,26 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var bundle: WebBundle
     private lateinit var progress: View
-    private lateinit var offlinePanel: View
+    private lateinit var welcomePanel: View
+    private lateinit var connectStatus: TextView
+    private lateinit var retryButton: View
+    private lateinit var urlInput: TextInputEditText
+    private lateinit var passwordInput: TextInputEditText
 
     private var loadedUrl: String? = null
     private var versionChecked = false
     private var webPermissionRequest: PermissionRequest? = null
     private var fileChooserCallback: android.webkit.ValueCallback<Array<Uri>>? = null
+
+    private val cameraPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            launchScanner()
+        } else {
+            Toast.makeText(this, R.string.camera_permission, Toast.LENGTH_LONG).show()
+        }
+    }
 
     private val webCameraPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -62,6 +84,25 @@ class MainActivity : AppCompatActivity() {
         } else {
             request.deny()
             Toast.makeText(this, R.string.camera_permission, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private val scanLauncher = registerForActivityResult(ScanContract()) { result ->
+        val contents = result.contents ?: return@registerForActivityResult
+        val payload = Pairing.parse(contents)
+        if (payload != null) {
+            beginOfficialPairing(payload)
+            return@registerForActivityResult
+        }
+        val manual = normalizeServerUrl(contents)
+        if (manual != null) {
+            urlInput.setText(manual)
+            Toast.makeText(this, R.string.discovery_found_manual, Toast.LENGTH_SHORT).show()
+        } else {
+            showPairingError(
+                getString(R.string.pairing_invalid) + "\n\n" +
+                    getString(R.string.pairing_scanned, contents.take(300)),
+            )
         }
     }
 
@@ -84,25 +125,42 @@ class MainActivity : AppCompatActivity() {
         webView.addJavascriptInterface(NativeBridge(), "OCDroidNative")
         bundle = WebBundle(this, settings)
         progress = findViewById(R.id.progress)
-        offlinePanel = findViewById(R.id.offlinePanel)
+        welcomePanel = findViewById(R.id.welcomePanel)
+        connectStatus = findViewById(R.id.connectStatus)
+        retryButton = findViewById(R.id.retryButton)
+        urlInput = findViewById(R.id.urlInput)
+        passwordInput = findViewById(R.id.passwordInput)
 
         configureWebView()
 
-        findViewById<View>(R.id.retryButton).setOnClickListener {
-            offlinePanel.isVisible = false
-            if (settings.isConfigured) loadServer() else openLoginPage()
+        findViewById<View>(R.id.scanButton).setOnClickListener { scanPairingCode() }
+        findViewById<View>(R.id.connectButton).setOnClickListener { handleConnectInput() }
+        findViewById<View>(R.id.openSettingsButton).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
+        findViewById<View>(R.id.helpButton).setOnClickListener { showHelp() }
+        findViewById<View>(R.id.copyAgentButton).setOnClickListener { copyAgentInstruction() }
+        retryButton.setOnClickListener {
+            welcomePanel.isVisible = false
+            webView.isVisible = true
+            loadServer()
+        }
+
+        urlInput.setText(settings.serverUrl.takeIf { settings.isConfigured }.orEmpty())
+        passwordInput.setText(settings.password)
 
         if (settings.isConfigured) {
             loadServer()
         } else {
-            openLoginPage()
+            showWelcome(status = null, allowRetry = false)
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Never leave the bundled login page: there is nothing to go back to.
-                if (webView.canGoBack() && !isLoginPage(webView.url)) {
+                if (welcomePanel.isVisible) {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                } else if (webView.canGoBack()) {
                     webView.goBack()
                 } else {
                     isEnabled = false
@@ -120,14 +178,18 @@ class MainActivity : AppCompatActivity() {
         ActiveSessionStore.activeSessionId?.let {
             MonitorService.cancelSessionNotifications(this, it)
         }
-        if (settings.isConfigured && settings.serverUrl != loadedUrl) {
-            loadServer()
-        }
-        if (!versionChecked && settings.isConfigured) {
-            versionChecked = true
-            lifecycleScope.launch {
-                bundle.checkForUpdates()
+        if (settings.isConfigured) {
+            if (settings.serverUrl != loadedUrl) {
+                loadServer()
             }
+            if (!versionChecked) {
+                versionChecked = true
+                lifecycleScope.launch {
+                    bundle.checkForUpdates()
+                }
+            }
+        } else {
+            showWelcome(status = null, allowRetry = false)
         }
         if (settings.notificationsEnabled && settings.backgroundMonitoring) {
             MonitorService.start(this)
@@ -139,6 +201,122 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
+    private fun showWelcome(status: String?, allowRetry: Boolean) {
+        welcomePanel.isVisible = true
+        webView.isVisible = false
+        progress.isVisible = false
+        connectStatus.text = status ?: getString(R.string.welcome_status_no_server)
+        retryButton.isVisible = allowRetry
+    }
+
+    private fun hideWelcome() {
+        welcomePanel.isVisible = false
+        webView.isVisible = true
+    }
+
+    private fun copyAgentInstruction() {
+        runCatching {
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(
+                android.content.ClipData.newPlainText(
+                    getString(R.string.copy_instruction),
+                    getString(R.string.welcome_agent_instruction),
+                )
+            )
+        }.onSuccess {
+            Toast.makeText(this, R.string.instruction_copied, Toast.LENGTH_LONG).show()
+        }.onFailure {
+            Toast.makeText(this, R.string.pairing_invalid, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun scanPairingCode() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            launchScanner()
+        } else {
+            cameraPermission.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun launchScanner() {
+        val options = ScanOptions().apply {
+            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            setPrompt(getString(R.string.scan_prompt))
+            setBeepEnabled(false)
+            setOrientationLocked(true)
+            setBarcodeImageEnabled(false)
+        }
+        runCatching { scanLauncher.launch(options) }
+            .onFailure { Toast.makeText(this, R.string.pairing_invalid, Toast.LENGTH_LONG).show() }
+    }
+
+    /**
+     * Opens the official OpenCode connect screen and lets that screen redeem the code. The
+     * previous flow redeemed the code natively, which consumed it before the web client could
+     * establish its own signed-in server entry, so the web app still showed its login screen.
+     */
+    private fun beginOfficialPairing(payload: PairingPayload) {
+        val target = Pairing.preferredServer(payload)
+        if (target == null) {
+            showPairingError(getString(R.string.pairing_loopback))
+            return
+        }
+
+        // Do not inject the pairing code into the official login form. Let the web client's own
+        // login page handle it; this avoids replacing the document and ending on a black screen.
+        MonitorService.stop(this)
+        settings.save(target, "opencode", "")
+        urlInput.setText(target)
+        passwordInput.setText("")
+        welcomePanel.isVisible = false
+        webView.isVisible = true
+        loadServer()
+    }
+
+    private fun showPairingError(message: String) {
+        if (isFinishing) return
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.pairing_failed_title)
+            .setMessage(message)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    private fun showHelp() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.help_title)
+            .setMessage(R.string.help_text)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    private fun handleConnectInput() {
+        val raw = urlInput.text?.toString().orEmpty().trim()
+        Pairing.parse(raw)?.let {
+            beginOfficialPairing(it)
+            return
+        }
+        if (raw.contains("/auth/connect/", ignoreCase = true) || raw.startsWith("{")) {
+            Toast.makeText(this, R.string.pairing_invalid, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val normalized = normalizeServerUrl(raw)
+        if (normalized == null) {
+            Toast.makeText(this, R.string.invalid_url, Toast.LENGTH_LONG).show()
+            return
+        }
+        settings.save(normalized, "opencode", passwordInput.text?.toString().orEmpty())
+        welcomePanel.isVisible = false
+        webView.isVisible = true
+        loadServer()
+        if (settings.notificationsEnabled && settings.backgroundMonitoring) {
+            MonitorService.start(this)
+        }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     @Suppress("DEPRECATION")
     private fun configureWebView() {
@@ -147,9 +325,6 @@ class MainActivity : AppCompatActivity() {
         webSettings.domStorageEnabled = true
         webSettings.databaseEnabled = true
         webSettings.cacheMode = WebSettings.LOAD_DEFAULT
-        // The bundled login page is our own asset, loaded from file:///android_asset/web/.
-        // file access must be on for that page to open at all; universal access lets the
-        // official client redeem pairing codes cross-origin when it lives on file://.
         webSettings.allowFileAccess = true
         webSettings.allowContentAccess = false
         webSettings.loadsImagesAutomatically = true
@@ -193,7 +368,6 @@ class MainActivity : AppCompatActivity() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val target = request.url
                 if (isServerUrl(target.toString())) return false
-                if (isLoginPage(target.toString())) return false
                 val scheme = target.scheme?.lowercase()
                 if (scheme !in EXTERNAL_SCHEMES) return true
                 return openExternally(target)
@@ -201,7 +375,6 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                 progress.isVisible = true
-                offlinePanel.isVisible = false
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
@@ -228,9 +401,13 @@ class MainActivity : AppCompatActivity() {
                 request: WebResourceRequest,
                 error: WebResourceError
             ) {
-                if (request.isForMainFrame) {
-                    progress.isVisible = false
-                    offlinePanel.isVisible = true
+                if (request.isForMainFrame && !isFinishing) {
+                    val target = normalizeServerUrl(settings.serverUrl)
+                        ?: return
+                    showWelcome(
+                        status = getString(R.string.welcome_status_unreachable, target),
+                        allowRetry = true,
+                    )
                 }
             }
 
@@ -252,7 +429,7 @@ class MainActivity : AppCompatActivity() {
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
-                progress.isVisible = newProgress < 100
+                progress.isVisible = newProgress < 100 && !welcomePanel.isVisible
             }
 
             override fun onPermissionRequest(request: PermissionRequest?) {
@@ -262,8 +439,7 @@ class MainActivity : AppCompatActivity() {
                     request.deny()
                     return
                 }
-                // The bundled login page is served from file:// when no server is configured.
-                // Allow its QR scanner to request the camera too.
+                // The official client can also scan pairing codes with its own camera UI.
                 if (!isServerOrigin(request.origin) && request.origin.scheme != "file") {
                     request.deny()
                     return
@@ -359,16 +535,6 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl(config.url, headers)
     }
 
-    /**
-     * Opens the official web client's own login page. Without a configured server the page
-     * is bundled in the APK, so scanning a pairing QR code with the camera works even before
-     * any server address is known. The official client owns everything on that page.
-     */
-    private fun openLoginPage() {
-        loadedUrl = null
-        webView.loadUrl(LOGIN_PAGE_URL)
-    }
-
     private fun isLoginPage(url: String?): Boolean {
         return url != null && url.startsWith("file:///android_asset/web/")
     }
@@ -426,10 +592,9 @@ class MainActivity : AppCompatActivity() {
                 ?: return
             finishSignIn(normalized, token)
         } else {
-            // The bundled login page runs from file:// and reports whoever the official client
-            // just stored there. Its storage survives reloads, so the list can hold a stale
-            // entry (a tunnel that was rotated, a laptop that went offline); only accept the
-            // report when that server actually answers right now.
+            // The bundled login page can report a saved server entry made earlier (for example
+            // a tunnel that has since been rotated). Only accept reports from servers that
+            // actually answer right now.
             val normalized = normalizeServerUrl(url) ?: return
             lifecycleScope.launch {
                 if (!Pairing.reachable(normalized)) return@launch
@@ -442,6 +607,8 @@ class MainActivity : AppCompatActivity() {
     private fun finishSignIn(normalized: String, token: String) {
         if (settings.serverUrl == normalized && settings.password == token) return
         settings.save(normalized, "opencode", token)
+        urlInput.setText(normalized)
+        passwordInput.setText(token)
         loadedUrl = normalized
         if (settings.notificationsEnabled && settings.backgroundMonitoring) {
             MonitorService.start(this)

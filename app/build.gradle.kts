@@ -14,8 +14,8 @@ android {
         applicationId = "amd.anik.ocdroid"
         minSdk = 26
         targetSdk = 34
-        versionCode = 8
-        versionName = "0.3.4"
+        versionCode = 9
+        versionName = "0.3.5"
 
         // No default server: the tunnel/hostname belongs to whichever machine runs
         // OpenCode, so it must be discovered or paired on first launch.
@@ -92,6 +92,8 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // Native pairing scanner used by the welcome screen before any web login exists.
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
