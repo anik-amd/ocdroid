@@ -61,7 +61,7 @@ $g.FillRectangle($accent, 120, 344, 190, 9)
 # Tagline.
 $fontTag = New-Object System.Drawing.Font("Segoe UI", 38, [System.Drawing.FontStyle]::Regular, [System.Drawing.GraphicsUnit]::Pixel)
 $brushMuted = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 168, 179, 199))
-$g.DrawString("The official OpenCode web client, natively on Android.", $fontTag, $brushMuted, 120, 386)
+$g.DrawString("An independent Android shell for the OpenCode web client.", $fontTag, $brushMuted, 120, 386)
 
 # Feature pills.
 $fontPill = New-Object System.Drawing.Font("Segoe UI", 24, [System.Drawing.FontStyle]::Regular, [System.Drawing.GraphicsUnit]::Pixel)

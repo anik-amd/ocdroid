@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner.png" alt="OCDroid — the official OpenCode web client, natively on Android">
+  <img src="docs/banner.png" alt="OCDroid — an independent Android shell for the OpenCode web client">
 </p>
 
 <p align="center">
@@ -43,40 +43,47 @@ protocol. If the official web client changes, OCDroid follows it.
 
 ## Screenshots
 
-The UI is the official OpenCode web client straight from your own server, in both themes —
-these shots follow your GitHub color scheme automatically.
+The UI is the OpenCode web client straight from your own server — in both themes.
 
 <table>
   <tr>
     <td align="center" width="50%">
-      <strong>Session chat</strong><br><br>
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark-chat.jpg">
-        <img src="docs/screenshots/light-chat.jpg" width="260" alt="Session chat">
-      </picture>
+      <strong>Session chat — light</strong><br><br>
+      <img src="docs/screenshots/light-chat.jpg" width="280" alt="Session chat, light theme">
     </td>
     <td align="center" width="50%">
-      <strong>Session tabs</strong><br><br>
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark-tabs.jpg">
-        <img src="docs/screenshots/light-tabs.jpg" width="260" alt="Session tabs">
-      </picture>
+      <strong>Session chat — dark</strong><br><br>
+      <img src="docs/screenshots/dark-chat.jpg" width="280" alt="Session chat, dark theme">
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <strong>Files</strong><br><br>
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark-files.jpg">
-        <img src="docs/screenshots/light-files.jpg" width="260" alt="File browser">
-      </picture>
+      <strong>Session tabs — light</strong><br><br>
+      <img src="docs/screenshots/light-tabs.jpg" width="280" alt="Session tabs, light theme">
     </td>
     <td align="center" width="50%">
-      <strong>Command palette</strong><br><br>
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark-cmd.jpg">
-        <img src="docs/screenshots/light-cmd.jpg" width="260" alt="Command palette opened from the titlebar button">
-      </picture>
+      <strong>Session tabs — dark</strong><br><br>
+      <img src="docs/screenshots/dark-tabs.jpg" width="280" alt="Session tabs, dark theme">
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <strong>Files — light</strong><br><br>
+      <img src="docs/screenshots/light-files.jpg" width="280" alt="File browser, light theme">
+    </td>
+    <td align="center" width="50%">
+      <strong>Files — dark</strong><br><br>
+      <img src="docs/screenshots/dark-files.jpg" width="280" alt="File browser, dark theme">
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <strong>Command palette — light</strong><br><br>
+      <img src="docs/screenshots/light-cmd.jpg" width="280" alt="Command palette opened from the titlebar button, light theme">
+    </td>
+    <td align="center" width="50%">
+      <strong>Command palette — dark</strong><br><br>
+      <img src="docs/screenshots/dark-cmd.jpg" width="280" alt="Command palette opened from the titlebar button, dark theme">
     </td>
   </tr>
 </table>
