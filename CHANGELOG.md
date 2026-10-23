@@ -2,6 +2,14 @@
 
 All notable changes to OCDroid. Older release notes are in [`release-notes/`](release-notes/).
 
+## [0.3.3] - 2026-10-23
+
+### Fixed
+
+- Login no longer ends on a black screen: OCDroid no longer reloads the page after the web
+  client stores its session token
+- QR scanning on the official web client's login page can request and use the camera
+
 ## [0.3.2] - 2026-10-23
 
 ### Added
