@@ -104,7 +104,7 @@ jobs:
           VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
           test -n "$VERSION"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Releasing OCDroid v$VERSION"
+          echo "Building OCDroid v$VERSION"
 
       - name: Mirror official web client
         env:
@@ -164,7 +164,11 @@ jobs:
             dist/SHA256SUMS
           if-no-files-found: error
 
+      # Releases are deliberate: version bumps and release notes only happen when the
+      # maintainer confirms a build after testing it on a device. Manual runs publish;
+      # CI runs from ordinary pushes only upload the APK artifact.
       - name: Publish versioned release
+        if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: v${{ steps.version.outputs.version }}

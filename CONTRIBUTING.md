@@ -98,6 +98,11 @@ Fast JVM tests cover:
 
 CI runs these tests before any signed release build. A pull request also gets a debug build.
 
+Every push to `main` builds a **signed APK artifact** (`OCDroid-apk`) that can be installed for
+device testing. Published releases are deliberate: bump the version and publish
+(`gh workflow run "Build OCDroid APK"`) only after the build was smoke-tested on a physical
+device and the maintainer confirmed it.
+
 ### Manual smoke test for device-only behavior
 
 Before announcing a release, verify on a physical phone:
