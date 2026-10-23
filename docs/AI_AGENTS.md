@@ -168,6 +168,8 @@ or environment files.
 ./gradlew :app:testDebugUnitTest --stacktrace
 ```
 
+On Windows, use `gradle` (Gradle 8.6) or run the shell script through Git Bash/WSL.
+
 If the local machine has no Android SDK, use GitHub Actions (open a pull request) or the
 dev container. Do not install an SDK without the user's approval.
 
