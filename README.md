@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/assets/hero.svg" alt="OCDroid — the official OpenCode web UI, in your pocket" width="900">
-</p>
-
 <h1 align="center">OCDroid</h1>
 
 <p align="center">
@@ -262,11 +258,9 @@ If you are an AI agent installing OCDroid or contributing changes, read
 
 ## 🙏 Credits and license
 
-OCDroid is **MIT licensed**. The original OC Remote copyright is preserved, and current OCDroid
-contributors are credited in [`LICENSE`](LICENSE).
+OCDroid is **MIT licensed**. Current OCDroid contributors are credited in [`LICENSE`](LICENSE).
 
-It began as a fork of [crim50n/oc-remote](https://github.com/crim50n/oc-remote). The current app
-is a clean WebView shell around the web client shipped by
+The app is a clean WebView shell around the web client shipped by
 [anomalyco/opencode](https://github.com/anomalyco/opencode).
 
 **Made with OpenCode, for OpenCode.** Independent project; not affiliated with OpenCode or

@@ -8,7 +8,6 @@ All notable changes to OCDroid. Older release notes are in [`release-notes/`](re
 
 - Command-palette button now also sets `margin-left`, keeping spacing on older Android WebView
   builds that do not support `margin-inline-start`
-- README hero graphic uses a standard `font-weight`
 
 ### Changed
 
@@ -32,12 +31,12 @@ All notable changes to OCDroid. Older release notes are in [`release-notes/`](re
 
 - README rewritten with the independent/non-affiliation disclaimer, why the app exists, install
   and pairing steps, hidden Settings access, command-palette usage and security notes
-- MIT license now preserves the original OC Remote copyright and adds OCDroid contributors
+- MIT license updated to credit OCDroid contributors
 - Web client mirroring requires `OC_SERVER_URL`; static-path allowlist, same-origin redirects,
   size caps and no URL logging
 - CI split into test, PR debug build and signed release jobs; default read-only permissions;
   Actions pinned to commit SHAs; checkout credentials not persisted
-- Stale OC Remote docs, screenshots and release notes removed
+- Stale docs, screenshots and release notes removed
 
 ### Fixed
 

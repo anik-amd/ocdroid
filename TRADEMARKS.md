@@ -18,9 +18,3 @@ The OCDroid name, icon and project branding identify this independent project. I
 a modified version, use a clearly different app name and icon, and state that it is an
 independent fork. You may describe it as "based on OCDroid" as long as the description does not
 imply endorsement.
-
-## Upstream attribution
-
-OCDroid began as a fork of [crim50n/oc-remote](https://github.com/crim50n/oc-remote). The
-original MIT copyright notice is preserved in [`LICENSE`](LICENSE). The current app is a clean
-WebView shell around the official OpenCode web client.

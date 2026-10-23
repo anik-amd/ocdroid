@@ -18,7 +18,6 @@ a mirror.
 - **GitHub Actions upgraded to v5.** `checkout`, `setup-java`, `setup-gradle`, and
   `upload-artifact` now use the current major versions, removing the Node 20 deprecation
   warnings from the release workflow.
-- **Hero graphic polish.** The README illustration uses a safer `font-weight` value.
 
 ## Command palette
 

@@ -9,6 +9,7 @@ on:
       - 'CODE_OF_CONDUCT.md'
       - 'CONTRIBUTING.md'
       - 'KNOWN_ISSUES.md'
+      - 'LICENSE'
       - 'SECURITY.md'
       - 'TRADEMARKS.md'
       - 'docs/**'
