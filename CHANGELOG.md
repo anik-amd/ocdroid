@@ -2,6 +2,31 @@
 
 All notable changes to OCDroid. Older release notes are in [`release-notes/`](release-notes/).
 
+## [0.3.4] - 2026-10-23
+
+### Fixed
+
+- Black screen after entering a login code: the bundled web-client mirror only contained
+  statically referenced files and was missing all 107 lazy-loaded chunks (the app shell, the
+  settings screen, dialogs — including the camera QR scanner). `scripts/fetch-web-assets.mjs`
+  now crawls import statements, dynamic imports and `__vite__mapDeps` arrays so every chunk is
+  mirrored (383 files instead of 124)
+- QR scan on the official login page could not open a camera because the scanner chunk itself
+  was never bundled; the complete mirror ships `_assets/scanner-*.js` now
+
+### Changed
+
+- The custom first-run login page is gone. OCDroid is a single WebView: when no server is
+  configured it opens the official web client's own "Connect to a server" page from the APK
+  (file:// asset), and the hidden SettingsActivity remains the manual fallback for server
+  configuration
+- After signing in on the bundled login page, the app hands the fresh token to the server copy
+  of the web client via `?auth_token=`, which the official client consumes and strips itself
+- Reported servers are accepted only after a reachability probe, so a rotated tunnel left over
+  in the login page's storage cannot silently take over the app
+- Removed the native ZXing scanner, its dependency and the server-discovery UI; camera
+  permission is now requested only for the web client's own QR scanner
+
 ## [0.3.3] - 2026-10-23
 
 ### Fixed

@@ -37,8 +37,8 @@ reliable on a phone.
 
 ## What it is — and what it is not
 
-**It is** an Android WebView shell around the official OpenCode web client, with native pairing,
-notifications, background monitoring, encrypted credentials and a few small compatibility patches.
+**It is** an Android WebView shell around the official OpenCode web client, with notifications,
+background monitoring, encrypted credentials and a few small compatibility patches.
 
 **It is not** a native chat client, a fork of the OpenCode UI, or an official OpenCode product.
 There is no custom composer, no re-skinned sidebar, and no second implementation of the chat
@@ -49,8 +49,7 @@ protocol. If the official web client changes, OCDroid follows it.
 | | Feature |
 | --- | --- |
 | 📱 | **Exact official UI** — renders the OpenCode web client from your own server |
-| 🔗 | **Official login + pairing** — QR camera scanning, pairing links, token handoff to the official client |
-| 📡 | **Server discovery** — mDNS (`opencode web --mdns`) or a bounded scan of port `4096` on your Wi-Fi |
+| 🔗 | **Official login + pairing** — the official client's own login page, QR camera scanning, token handoff |
 | 🔔 | **Native notifications** — finished, failed, interrupted, permission and question events |
 | 🤫 | **Active-conversation suppression** — no alert for the session you are looking at |
 | ⌘ | **Command-palette button** — injected into the official titlebar using official icon-button styles |
@@ -100,14 +99,15 @@ the port may be able to use your agent.
 
 ### 3. Connect the phone
 
-Open OCDroid and either:
+Open OCDroid — it immediately shows the official OpenCode *"Connect to a server"* page. Then
+either:
 
-- tap **Find on Wi-Fi**, then tap the discovered server, or
-- tap **Scan pairing QR** and scan the code from `opencode pair`, or
-- paste the server address / pairing link manually.
+- tap **Scan QR code** and scan the code printed by `opencode pair`, or
+- paste the pairing link into the login page, or
+- enter your server address and password directly in the official form.
 
-The official OpenCode connect screen loads. Finish signing in **there**; OCDroid does not collect
-your password with a custom form.
+Manual server configuration also remains available in the hidden Settings (long-press the
+launcher icon).
 
 ### 4. Allow notifications
 
@@ -159,8 +159,7 @@ available.
 - Credentials are stored with **Android Keystore-backed `EncryptedSharedPreferences`**.
 - If Keystore is unavailable, the password stays **in memory** for the current process; it is not
   written to a plaintext fallback file. Older plaintext fallback data is migrated and removed.
-- LAN discovery probes are **unauthenticated**. The password/token is never sent to every host on
-  the network.
+- LAN discovery was removed; the app never probes hosts on your network.
 - The WebView compares **full origins** (scheme + host + port) for the bridge, camera, auth,
   bundled assets and downloads.
 - Mixed content and third-party cookies are disabled.
@@ -179,7 +178,7 @@ Use HTTPS for remote access and trusted Wi-Fi for HTTP. See [`SECURITY.md`](SECU
 
 | Problem | Try this |
 | --- | --- |
-| No server found | Same Wi-Fi? Start with `opencode web --mdns` or `--hostname 0.0.0.0`. Check the firewall. In WSL/Docker, forward the port to the host. |
+| Nothing loads at all | The server may be down the tunnel went away. Start OpenCode again and re-pair if the address changed. Manual entry is in hidden Settings (long-press the icon). |
 | 401 / password prompt | Set `OPENCODE_SERVER_PASSWORD` before starting the server, then enter the same password. Pairing links/tokens also work. |
 | Camera won't open in the official QR scanner | WebView usually requires a secure origin for camera. Use an HTTPS tunnel, or paste the pairing link instead. |
 | No notifications | Allow notifications, keep background monitoring on, and exempt OCDroid from battery optimization. Use **Send test notification**. |

@@ -204,9 +204,10 @@ update the docs and release notes too:
 Before opening a PR, check:
 
 - [ ] No real URL, token, password, keystore or signing material is in the diff.
-- [ ] Discovery still sends no Authorization header.
+- [ ] The bundled login page (file://) is the only file:// URL the app ever loads, and its
+      bridge only reports after a reachability probe accepts the reported server.
 - [ ] Origin comparisons use `ServerOrigin.same`, not host-only checks.
-- [ ] The bridge is injected only for the configured server origin.
+- [ ] The bridge is injected only for the configured server origin and the bundled login page.
 - [ ] Mixed content stays disabled; third-party cookies stay disabled.
 - [ ] External download hosts do not receive the server token or cookies.
 - [ ] `AssetPaths` rejects `..`, `%2e`, `%2f`, backslashes and NUL bytes.

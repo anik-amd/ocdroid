@@ -14,7 +14,6 @@ the platform features a browser tab cannot provide reliably.
 │       │              └── injected bridge / palette button    │
 │       │                                                      │
 │       ├── SettingsStore ── EncryptedSharedPreferences        │
-│       ├── ServerDiscovery ── mDNS + /24 probe (no creds)     │
 │       ├── Pairing ── QR / pairing-link parsing               │
 │       └── MonitorService ── SSE ── Android notifications     │
 └──────────────────────────────────────────────────────────────┘
@@ -24,12 +23,11 @@ the platform features a browser tab cannot provide reliably.
 
 | Component | Responsibility |
 | --- | --- |
-| `MainActivity` | WebView lifecycle, setup UI, origin policy, camera/file chooser, downloads, bridge |
-| `WebViewPatches` | Two small injected scripts: Enter-to-newline and the command-palette button |
-| `WebBundle` | Serves the optional packaged `index.html` and static assets; live-version check |
+| `MainActivity` | WebView lifecycle, origin policy, camera/file chooser, downloads, bridge |
+| `WebViewPatches` | Injected scripts: Enter-to-newline, command-palette button, the native bridge |
+| `WebBundle` | Serves the packaged `index.html` and static assets; live-version check |
 | `SettingsStore` | Encrypted settings, Keystore fallback policy, server config |
-| `ServerDiscovery` | mDNS/DNS-SD and bounded LAN probing, unauthenticated |
-| `Pairing` | Parses pairing links/QR payloads and chooses a reachable URL |
+| `Pairing` | Parses pairing links/QR payloads, reaches out/back, chooses a server URL |
 | `MonitorService` | Foreground SSE connection and notification decisions |
 | `NotificationRules` | Pure classification of OpenCode events (JVM-tested) |
 | `EventParser` | Lightweight SSE payload parsing without Android dependencies |
@@ -41,18 +39,21 @@ the platform features a browser tab cannot provide reliably.
 ## Startup and connection
 
 1. `MainActivity` reads `SettingsStore`.
-2. If configured, it loads the server root in the WebView. Otherwise it shows the setup panel and
-   starts unauthenticated discovery.
-3. The official web client handles login and stores its own server entry in `localStorage`.
+2. If configured, it loads the server root in the WebView. Otherwise it loads the **bundled
+   login page** (`file:///android_asset/web/index.html`), which is the official web client's own
+   "Connect to a server" screen — no custom first-run form.
+3. The official web client handles login (paste a pairing link, scan its QR with the camera, or
+   enter address/password) and stores its own server entry in `localStorage`.
 4. `WebViewPatches.nativeBridge` reads that entry and reports the URL/token to
-   `OCDroidNative.onServerConnected`. OCDroid stores the token as the Basic-auth password so the
-   native monitor can use it.
+   `OCDroidNative.onServerConnected`. On the bundled login page the reported server must answer
+   a reachability probe first; OCDroid then stores the token as the Basic-auth password and
+   opens the real server origin with `?auth_token=`, which the official client consumes itself.
 5. The monitor connects to `/api/event` (v2), `/global/event` or `/event` (v1) and translates
    events into notifications.
 
-Pairing is deliberately delegated to the official login screen. The native side may parse a QR
-payload, but it does not redeem the code itself: doing that consumed the code before the web
-client could create its own signed-in server entry.
+Pairing is entirely delegated to the official login screen. The native side never redeems a
+pairing code itself: doing that consumed the code before the web client could create its own
+signed-in server entry.
 
 ## Origin policy
 
@@ -73,8 +74,12 @@ rather than handed to an arbitrary Android intent.
 
 ## Bundled web client
 
-`scripts/fetch-web-assets.mjs` mirrors the static shell at build time:
+`scripts/fetch-web-assets.mjs` mirrors the official web client at build time:
 
+- starts at `/` and follows every reference it finds in the fetched files:
+  HTML `<script>`/`<link>` tags, CSS `url()`, static/side-effect imports, dynamic
+  `import(...)` specifiers and `__vite__mapDeps` preload arrays — so lazily-loaded
+  chunks are included, not just the eager shell
 - only `/_assets/`, `/assets/`, `/icons/`, `/fonts/` and a short allowlist of root files
 - same-origin redirects only
 - per-file and total size caps
@@ -114,7 +119,7 @@ On tap it dispatches the same keyboard event on `document`, with a delayed fallb
 
 ## Security boundaries
 
-- credentials never go to discovery probes
+- credentials only go to the configured server origin and reachability probes of a server the official client just signed in to
 - plaintext password fallback is not used
 - mixed content is disabled
 - third-party cookies are disabled

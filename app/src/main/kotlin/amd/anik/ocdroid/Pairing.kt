@@ -103,6 +103,25 @@ object Pairing {
             ?: usable.firstOrNull()
     }
 
+    /**
+     * Cheap reachability probe for a server origin reported by the web client.
+     *
+     * The bundled login page runs from file:// and its localStorage can still contain a
+     * saved server from an earlier session (for example a tunnel that was since rotated).
+     * Only accept a reported server when it is actually reachable — any HTTP status
+     * counts (the SPA renders the login page even unauthenticated), only connection
+     * failures are rejected.
+     */
+    fun reachable(base: String): Boolean {
+        if (isLoopback(base)) return false
+        val request = Request.Builder()
+            .url("$base/api/pair")
+            .header("Accept", "application/json")
+            .build()
+        val response = runCatching { client.newCall(request).execute() }.getOrNull() ?: return false
+        response.use { return true }
+    }
+
     /** True when this address only works on the computer that printed it. */
     fun isLoopback(url: String): Boolean {
         val host = runCatching { java.net.URI(url).host }.getOrNull()

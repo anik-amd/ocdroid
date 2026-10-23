@@ -132,6 +132,72 @@ function extractHtmlRefs(html, documentUrl) {
 }
 
 /**
+ * The build uses lazy chunks: everything below the fold is loaded through dynamic
+ * imports and `__vite__mapDeps` arrays that only exist as string literals inside the
+ * JavaScript chunks. Mirroring only the hard-coded HTML/CSS refs therefore shipped an
+ * APK whose web client crashed with blank pages and missing features (including the
+ * camera QR scanner on the connect screen) as soon as the SPA lazy-imported anything.
+ *
+ * Over-collecting is safe: enqueue() still verifies isAllowedPath() and the origin, and
+ * download() only writes files the server actually returned.
+ */
+function extractJsRefs(code, codeUrl) {
+  const enqueueSpec = (spec) => {
+    if (!spec) return;
+    try {
+      // mapDeps entries are paths relative to the document root, not to the chunk.
+      if (/^(?:_?assets)\/[A-Za-z0-9_.~-]/.test(spec)) {
+        enqueue(new URL("/" + spec, ORIGIN + "/"));
+      } else {
+        enqueue(new URL(spec, codeUrl));
+      }
+    } catch {
+      /* ignore malformed references */
+    }
+  };
+
+  // static + side-effect imports: from"./x.js" / import"./x.js"
+  for (const block of code.matchAll(/(?:from|(?<![\w$.])import)\s*[.'"`]([^'"`]*\.(?:js|css))[.'"`]/g)) {
+    enqueueSpec(block[1]);
+  }
+
+  // dynamic imports, including conditional ones: import(cond ? "./a.js" : "./b.js")
+  for (const call of code.matchAll(/import\s*\(/g)) {
+    const start = call.index + call[0].length;
+    let depth = 1;
+    let end = start;
+    while (depth > 0 && end < code.length) {
+      const ch = code[end];
+      if (ch === "(") depth++;
+      else if (ch === ")" && depth-- === 1) break;
+      end++;
+    }
+    const args = code.slice(start, end);
+    for (const m of args.matchAll(/[.'"`]([^.'"`]*\.(?:js|css))[.'"`]/g)) enqueueSpec(m[1]);
+  }
+
+  // __vite__mapDeps(...)/m.f=[ ... ] arrays of hashed asset names
+  const arrayStart = code.indexOf("mapDeps");
+  if (arrayStart >= 0) {
+    const bracket = code.indexOf("[", arrayStart);
+    if (bracket >= 0) {
+      let depth = 0;
+      let end = bracket;
+      while (end < code.length) {
+        const ch = code[end];
+        if (ch === "[") depth++;
+        else if (ch === "]") {
+          if (--depth === 0) break;
+        }
+        end++;
+      }
+      const entries = code.slice(bracket, end + 1);
+      for (const m of entries.matchAll(/[.'"`]([^.'"`]*\.(?:js|css))[.'"`]/g)) enqueueSpec(m[1]);
+    }
+  }
+}
+
+/**
  * Follow only same-origin redirects. Node's default `redirect: "follow"` would let the
  * configured server redirect the bundler to an unrelated host while carrying the Basic
  * auth header and writing that host's bytes into the APK.
@@ -172,6 +238,9 @@ async function download(url) {
   if (type.includes("text/css") || finalUrl.pathname.endsWith(".css")) {
     extractCssRefs(buffer.toString("utf8"), finalUrl);
   }
+  if (type.includes("text/javascript") || type.includes("application/javascript") || finalUrl.pathname.endsWith(".js")) {
+    extractJsRefs(buffer.toString("utf8"), finalUrl);
+  }
   if (type.includes("application/manifest+json") || finalUrl.pathname.endsWith(".webmanifest")) {
     try {
       const manifest = JSON.parse(buffer.toString("utf8"));
@@ -202,18 +271,21 @@ async function main() {
 
   const mainScript = indexHtml.match(/src="(\/_assets\/index-[^"]+\.js)"/)?.[1] ?? null;
 
+  let bundled = 1; // index.html
   while (queue.length) {
     const batch = queue.splice(0, 8);
-    await Promise.all(batch.map((url) => download(url).catch((error) => {
+    await Promise.all(batch.map((url) => download(url).then(() => {
+      bundled += 1;
+    }).catch((error) => {
       console.warn(`skip ${url.pathname}: ${error.message}`);
     })));
   }
 
   fs.writeFileSync(
     path.join(OUT, "bundle.json"),
-    JSON.stringify({ builtAt: new Date().toISOString(), mainScript, files: seen.size + 1 }, null, 2),
+    JSON.stringify({ builtAt: new Date().toISOString(), mainScript, files: bundled }, null, 2),
   );
-  console.log(`Bundled ${seen.size + 1} files (${(bytes / 1024 / 1024).toFixed(1)} MiB) from the configured server.`);
+  console.log(`Bundled ${bundled} files (${(bytes / 1024 / 1024).toFixed(1)} MiB) from the configured server.`);
   console.log(`Main script: ${mainScript}`);
 }
 
