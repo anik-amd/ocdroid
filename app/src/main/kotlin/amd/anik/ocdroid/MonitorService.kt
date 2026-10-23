@@ -7,6 +7,8 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.net.Uri
@@ -71,6 +73,20 @@ class MonitorService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             stopSelf()
+            return START_NOT_STICKY
+        }
+        if (intent?.action == ACTION_DISCONNECT) {
+            // Disconnect stops monitoring and exits the app. It intentionally does not clear
+            // the saved server settings, so the user stays signed in for the next launch.
+            MonitorStatus.setState(this, "stopped", "disconnected")
+            monitorJob?.cancel()
+            activeCall?.cancel()
+            scope.cancel()
+            wakeLock?.let { if (it.isHeld) it.release() }
+            wakeLock = null
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            android.os.Process.killProcess(android.os.Process.myPid())
             return START_NOT_STICKY
         }
         if (!settings.isConfigured ||
@@ -333,13 +349,27 @@ class MonitorService : Service() {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val host = runCatching { android.net.Uri.parse(settings.serverUrl).host }.getOrNull()
-            ?: settings.serverUrl
+        val disconnectPending = PendingIntent.getService(
+            this,
+            2,
+            Intent(this, MonitorService::class.java).apply {
+                action = ACTION_DISCONNECT
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         return NotificationCompat.Builder(this, CHANNEL_MONITORING)
             .setSmallIcon(R.drawable.ic_notification)
+            .setLargeIcon(BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher))
+            .setColor(Color.parseColor("#7C9CFF"))
             .setContentTitle(getString(R.string.monitoring_title))
-            .setContentText(getString(R.string.monitoring_text, host))
+            .setContentText(getString(R.string.monitoring_text))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(getString(R.string.monitoring_text)))
             .setContentIntent(pending)
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                getString(R.string.disconnect),
+                disconnectPending,
+            )
             .addAction(
                 android.R.drawable.ic_menu_manage,
                 getString(R.string.settings_title),
@@ -359,6 +389,7 @@ class MonitorService : Service() {
         private const val CHANNEL_TASKS = TASKS_CHANNEL_ID
         private const val CHANNEL_PERMISSIONS = "attention_v3"
         private const val ACTION_STOP = "amd.anik.ocdroid.STOP_MONITOR"
+        private const val ACTION_DISCONNECT = "amd.anik.ocdroid.DISCONNECT_MONITOR"
         private val STREAM_PATHS = listOf("/api/event", "/global/event", "/event")
         private val TASK_VIBRATION = longArrayOf(0L, 220L, 140L, 220L)
         private val ATTENTION_VIBRATION = longArrayOf(0L, 420L, 180L, 420L)
