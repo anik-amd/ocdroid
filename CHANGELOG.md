@@ -2,6 +2,20 @@
 
 All notable changes to OCDroid. Older release notes are in [`release-notes/`](release-notes/).
 
+## [0.3.2] - 2026-10-23
+
+### Added
+
+- Bundled official web client in the release APK from the configured server mirror
+- Disconnect action in the persistent monitoring notification; exits the app without clearing
+  saved server settings
+
+### Changed
+
+- Persistent monitoring notification now says "Connected with Opencode" and uses the app's
+  colored icon
+- Expanded notification shows Disconnect and Settings actions
+
 ## [0.3.1] - 2026-10-23
 
 ### Fixed
