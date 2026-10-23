@@ -43,6 +43,11 @@ OCDroid publishes normal, versioned GitHub releases. Each release contains `OCDr
 private infrastructure. The mirror script never logs it. If it is missing, the release still
 builds but does not bundle the web UI.
 
+The mirror can use a dedicated OpenTunnel profile instead of OpenCode's remote-access tunnel.
+Keep that tunnel client running while the release build runs; the workflow only needs the public
+origin and, if enabled, the OpenCode Basic-auth password. If `OC_SERVER_URL` points at a dedicated
+profile, rotate that profile and update the secret.
+
 Never print a secret in a workflow step, and never upload the keystore. The workflow removes
 `app/keystore` at the end even when a step fails.
 
@@ -85,8 +90,10 @@ unzip -l OCDroid.apk | grep 'assets/web/index.html'
 
 ### Rotate an exposed OpenTunnel URL
 
-OCDroid does not own the tunnel. It is created by OpenCode remote access and its private key
-lives in the OpenTunnel profile on the machine that created it. Do this on that machine.
+Rotate the tunnel that `OC_SERVER_URL` actually points at. The steps below assume OpenCode's
+default remote-access profile. A dedicated mirror profile uses the same deletion rule: remove
+the profile's tunnel, then recreate it and update the secret. The private key lives in the
+OpenTunnel profile on the machine that created it; do this on that machine.
 
 1. Sign out existing sessions by changing the OpenCode password:
 
