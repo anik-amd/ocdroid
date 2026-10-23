@@ -107,23 +107,26 @@ Do not send the APK through a public link. Use the official release URL.
 
 The user must run OpenCode on their own computer or server. A safe helper flow:
 
-1. On the computer, start the server with a password:
+1. On the computer, start the server with a password, reachable from the phone's expected
+   network:
    ```bash
    export OPENCODE_SERVER_PASSWORD='choose-a-strong-password'
-   opencode web --mdns
-   ```
-   Or use a fixed LAN address:
-   ```bash
    opencode web --hostname 0.0.0.0 --port 4096
    ```
-2. On the phone, open OCDroid.
-3. Tap **Find on Wi-Fi**, or tap **Scan pairing QR** and scan the code from `opencode pair`.
-4. If the official login screen appears, finish login there. OCDroid deliberately does not
+2. On the phone, open OCDroid. The welcome screen asks where the phone is — pick the matching
+   pairing path:
+   - **At home (same Wi-Fi):** run `opencode pair` on the computer, then tap **Scan pairing QR**.
+   - **Away (mobile data / other network):** run `opencode pair --remote` (add `--yes` when
+     running from a script; the first run opens the secure tunnel and can take a couple of
+     minutes), then turn Wi-Fi off on the phone and scan. The QR carries both the LAN and tunnel
+     addresses, and the app connects over whichever is reachable.
+3. If the official login screen appears, finish login there. OCDroid deliberately does not
    collect the password itself.
-5. Allow notifications when prompted.
+4. Allow notifications when prompted.
 
-Never ask the user to share the password or token. If they need remote access, have them use
-their own HTTPS tunnel or `opencode pair --remote`, then scan the QR code locally.
+Never ask the user to share the password or token, and never print pairing links or tunnel
+hostnames. Pairing links are single-use and expire after five minutes. The remote exposure is
+session-scoped — after an OpenCode restart, run `opencode pair --remote` once more and re-pair.
 
 ### 7. Find Settings
 

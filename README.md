@@ -66,7 +66,7 @@ protocol. If the official web client changes, OCDroid follows it.
 - An OpenCode server you can reach from the phone
 - A password on the server is strongly recommended
 - LAN: phone and computer on the same Wi-Fi
-- Remote: an HTTPS tunnel or your own reverse proxy — **not** plain HTTP over the internet
+- Remote: OpenCode's built-in tunnel (`opencode pair --remote`) or your own HTTPS reverse proxy — **not** plain HTTP over the internet
 
 ## Quick start
 
@@ -99,15 +99,28 @@ the port may be able to use your agent.
 
 ### 3. Connect the phone
 
-Open OCDroid. A **welcome screen** explains the whole setup — no server configured yet. Then:
+Open OCDroid. A **welcome screen** explains the whole setup — no server configured yet. It asks
+one question first: **where is your phone right now?** Then:
+
+**🏠 At home — phone on the same Wi-Fi:**
 
 1. On the computer running OpenCode, run `opencode pair` in a terminal.
 2. In the app, tap **Scan pairing QR** and scan the code — OCDroid redeems the pairing, hands
    the session token to the official web client, and you land in your OpenCode UI.
 
+**🌍 Away — mobile data or a different network:**
+
+1. On the computer, run `opencode pair --remote` (add `--yes` when running from a script, so the
+   expose-the-server confirmation is skipped). The first run opens a secure tunnel through
+   OpenCode's own relay and can take a couple of minutes.
+2. In the app, turn Wi-Fi off and tap **Scan pairing QR**.
+
+The remote QR carries **both** the LAN and the tunnel address — the app redeems it over whichever
+is reachable, so a phone paired this way keeps working when you come home or leave.
+
 No terminal at hand? Tap **Copy instruction for my agent** on the welcome screen and paste the
-message into a new OpenCode session on the computer: the AI agent starts the web server for you
-and shows a QR code when it is done — you just scan.
+message into a new OpenCode session on the computer: the AI agent starts the web server, asks
+where your phone is, runs the matching pairing command, and shows a QR code — you just scan.
 
 Alternatives on the same welcome screen:
 
@@ -122,15 +135,18 @@ web UI itself handles every login step after that — including its own camera Q
 Android may ask for notification permission. Say yes if you want task and permission alerts.
 You can test sound and vibration from Settings.
 
-### 5. Remote access
+### 5. Remote access details
 
-For a server outside your LAN, use an HTTPS tunnel and pair with:
+`opencode pair --remote` exposes the server through OpenCode's built-in HTTPS tunnel — no port
+forwarding, no third-party proxy config. Important to know:
 
-```bash
-opencode pair --remote
-```
-
-Scan the QR locally. Do not expose a plain HTTP OpenCode port to the public internet.
+- Pairing links are **single-use** and valid for five minutes; run the command again for a fresh one.
+- The exposure is **session-scoped**: if the phone can't reach the server after OpenCode restarts,
+  run `opencode pair --remote` once more and re-pair (one scan).
+- Do not expose a plain HTTP OpenCode port to the public internet instead. Prefer the tunnel or
+  your own HTTPS reverse proxy.
+- LAN pairing (`opencode pair`) never exposes the server to the internet — the QR only carries
+  addresses reachable on your own network.
 
 ## ⌘ Command palette
 

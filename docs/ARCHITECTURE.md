@@ -40,7 +40,8 @@ the platform features a browser tab cannot provide reliably.
 
 1. `MainActivity` reads `SettingsStore`.
 2. If configured, it loads the server root in the WebView and begins pairing. Otherwise it shows
-   a **native welcome screen** — plain onboarding with setup steps (`opencode pair`), a
+   a **native welcome screen** — plain onboarding that presents the two connection modes (LAN
+   `opencode pair` vs remote `opencode pair --remote` and when each applies), the
    copy-paste instruction the user can hand to their OpenCode AI agent, and connect controls
    (native ZXing QR scanner, pairing-link/address + password form, Settings, help). No server
    WebView is loaded while the welcome screen is visible, so a broken mirror or dead tunnel can
