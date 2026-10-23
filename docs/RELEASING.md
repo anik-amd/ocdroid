@@ -46,6 +46,108 @@ builds but does not bundle the web UI.
 Never print a secret in a workflow step, and never upload the keystore. The workflow removes
 `app/keystore` at the end even when a step fails.
 
+### Enable the bundled web UI
+
+Run these from a machine that can reach the OpenCode server. The interactive prompt keeps the
+value out of shell history:
+
+```bash
+gh secret set OC_SERVER_URL --repo anik-amd/ocdroid
+# paste the server root, for example:
+# https://opencode.<tunnel-id>.opentunnel.xyz
+
+# Only if the server uses Basic auth:
+gh secret set OC_SERVER_USERNAME --repo anik-amd/ocdroid
+gh secret set OC_SERVER_PASSWORD --repo anik-amd/ocdroid
+```
+
+Use the origin only. Do not paste a one-time `/auth/connect/...` pairing link and do not put
+credentials in `OC_SERVER_URL`. Verify the names, not the values:
+
+```bash
+gh secret list --repo anik-amd/ocdroid
+```
+
+Then bump `versionCode` / `versionName` and push. Do not re-run the same version just to add the
+bundle; the next release should point at the new source. If a release run failed after the
+version bump and you need to retry the same commit:
+
+```bash
+gh workflow run build.yml --repo anik-amd/ocdroid --ref main
+```
+
+The release log should show that the mirror ran without the `OC_SERVER_URL is not configured`
+warning. A quick APK check:
+
+```bash
+unzip -l OCDroid.apk | grep 'assets/web/index.html'
+```
+
+### Rotate an exposed OpenTunnel URL
+
+OCDroid does not own the tunnel. It is created by OpenCode remote access and its private key
+lives in the OpenTunnel profile on the machine that created it. Do this on that machine.
+
+1. Sign out existing sessions by changing the OpenCode password:
+
+   ```bash
+   opencode service set password 'a-new-long-password'
+   opencode service start
+   ```
+
+2. Disconnect remote access:
+
+   ```bash
+   opencode service set remote false
+   ```
+
+3. Delete the old tunnel. This is destructive: it removes the hostname for good and invalidates
+   every route that shares the default tunnel.
+
+   ```bash
+   opentunnel status
+   opentunnel delete --yes
+   ```
+
+   If the CLI is missing, install it with `npm install -g opentunnel`, or use the Homebrew/curl
+   options from <https://opentunnel.xyz/>. For a non-default profile:
+
+   ```bash
+   opentunnel --profile <profile> delete --yes
+   ```
+
+   If `opentunnel status` says there is no profile, the old identity is not on this machine.
+   Stop the old OpenCode/opentunnel service on whichever machine ran it. Without the old profile
+   you cannot call `DELETE` for the old tunnel, but an offline tunnel cannot serve traffic.
+
+4. Create a fresh tunnel and print a new pairing link:
+
+   ```bash
+   opencode pair --remote --yes
+   ```
+
+   To let the service keep the new tunnel, leave remote access enabled. The origin is the
+   `https://<route>.<new-tunnel-id>.opentunnel.xyz` part, not the `/auth/connect/...` link.
+
+5. Verify the new origin is the one the server reports:
+
+   ```bash
+   opencode api get /api/info
+   ```
+
+6. Update the repository secret with the new origin:
+
+   ```bash
+   gh secret set OC_SERVER_URL --repo anik-amd/ocdroid
+   ```
+
+7. Bump the app version and publish a new release so the APK is rebuilt with the new mirror.
+
+Do not rely on `opencode service set remote false` and `true` alone to rotate the hostname:
+OpenCode reuses the device's default OpenTunnel profile, so it may reconnect to the same tunnel.
+Deleting the tunnel (or the profile) is what forces a new hostname. The route name is not
+authentication; keep the OpenCode password enabled.
+
 ## Actions policy
 
 - Workflow default permission is `contents: read`.
