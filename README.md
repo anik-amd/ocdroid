@@ -205,6 +205,8 @@ cd ocdroid
 ./gradlew :app:assembleDebug
 ```
 
+On Windows, use `gradle` (Gradle 8.6) or run the shell script through Git Bash/WSL.
+
 Requirements for a local build: JDK 17, Android SDK 34, and Node 20+ only if you want to mirror
 the web client.
 

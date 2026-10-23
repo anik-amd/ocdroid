@@ -54,6 +54,8 @@ cd ocdroid
 ./gradlew :app:testDebugUnitTest
 ```
 
+On Windows, use `gradle` (Gradle 8.6) or run the shell script through Git Bash/WSL.
+
 If Gradle cannot find the SDK, create `local.properties`:
 
 ```properties
